@@ -22,6 +22,7 @@ class MyApp extends StatelessWidget {
          primary: AppColors.taskCard,
          secondary: AppColors.accent,
        ),
+       
        textTheme: Theme.of(context).textTheme.apply(
          bodyColor: AppColors.textPrimary,
          displayColor: AppColors.textPrimary,
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
 }
 
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
  const DashboardPage({super.key});
 
 
@@ -55,6 +56,7 @@ class DashboardPage extends StatelessWidget {
  ];
 
 
+  //need to pull from database
  static const List<TaskItem> _todayTasks = [
    TaskItem(
      title: 'Make Bed',
@@ -94,10 +96,106 @@ class DashboardPage extends StatelessWidget {
    SubtaskItem(title: 'Dry bedding'),
  ];
 
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
 
+//state
+class _DashboardPageState extends State<DashboardPage> {
+
+ var selectedIndex = 0;
  @override
  Widget build(BuildContext context) {
-   return Scaffold(
+
+  Widget page;
+
+  switch(selectedIndex){
+    case 0:
+      page = DailyTaskScreen();
+      break;
+    case 1:
+      page = CalendarScreen();
+      break;
+    case 2:
+      page = OutlookScreen();
+      break;
+    case 3:
+      page = TasksScreen();
+      break;
+    case 4:
+      page = GoalsScreen();
+      break;
+    case 5:
+      page = AchievementsScreen();
+      break;
+    case 6:
+      page = GamesScreen();
+      break;
+    case 7:
+      page = PopOutScreen();
+      break;
+    case 8:
+      page = SettingsScreen();
+      break;
+    case 9:
+      page = SignOutScreen();
+    default:
+      throw UnimplementedError('no widget for $selectedIndex');
+  }
+
+  return LayoutBuilder(
+    builder: (context, constraints){
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: constraints.maxWidth >= 600,
+                destinations: [
+                  NavigationRailDestination(icon: Icon(Icons.home), label: Text('Daily Tasks')),
+                  NavigationRailDestination(icon: Icon(Icons.event_note), label: Text('Calendar')),
+                  NavigationRailDestination(icon: Icon(Icons.vrpano), label: Text('Outlook')),
+                  NavigationRailDestination(icon: Icon(Icons.view_list), label: Text('All Tasks')),
+                  NavigationRailDestination(icon: Icon(Icons.flag), label: Text('Goals')),
+                  NavigationRailDestination(icon: Icon(Icons.emoji_events), label: Text('Achievements')),
+                  NavigationRailDestination(icon: Icon(Icons.sports_esports), label: Text('Games')),
+                  NavigationRailDestination(icon: Icon(Icons.open_in_new), label: Text('Pop out')),
+                  NavigationRailDestination(icon: Icon(Icons.settings), label: Text('Settings')),
+                  NavigationRailDestination(icon: Icon(Icons.logout), label: Text('Sign Out')),
+                  
+
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                },
+              ),
+              ),
+              Expanded(
+                child: Container(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  child: page,
+
+                ),
+
+              ),
+          ]
+        ),
+      );
+    }
+    
+    
+    );
+  
+ }
+}
+
+class DailyTaskScreen extends StatelessWidget{
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
      body: SafeArea(
        child: Padding(
          padding: const EdgeInsets.all(24),
@@ -108,8 +206,8 @@ class DashboardPage extends StatelessWidget {
                width: 240,
                child: Sidebar(
                  title: 'Daily Tasks (Pane open)',
-                 primaryItems: _mainDestinations,
-                 secondaryItems: _secondaryDestinations,
+                 primaryItems: DashboardPage._mainDestinations,
+                 secondaryItems: DashboardPage._secondaryDestinations,
                ),
              ),
              const SizedBox(width: 24),
@@ -154,12 +252,12 @@ class DashboardPage extends StatelessWidget {
                        child: Column(
                          crossAxisAlignment: CrossAxisAlignment.start,
                          children: [
-                           for (final task in _todayTasks)
+                           for (final task in DashboardPage._todayTasks)
                              TaskCard(task: task),
                            const SizedBox(height: 16),
                            const FinishedSectionHeader(title: 'Finished - 8'),
                            const SizedBox(height: 12),
-                           for (final task in _completedTasks)
+                           for (final task in DashboardPage._completedTasks)
                              TaskCard(task: task),
                            const SizedBox(height: 16),
                            const AddTaskCard(),
@@ -176,7 +274,7 @@ class DashboardPage extends StatelessWidget {
                child: TaskDetailPanel(
                  title: 'Make Bed',
                  score: 9,
-                 subtasks: _makeBedSubtasks,
+                 subtasks: DashboardPage._makeBedSubtasks,
                  tags: [
                    TagInfo(label: 'Due Oct. 4', icon: Icons.event_available),
                    TagInfo(label: 'Goals', icon: Icons.flag_outlined),
@@ -196,9 +294,8 @@ class DashboardPage extends StatelessWidget {
        ),
      ),
    );
- }
+  }
 }
-
 
 class Sidebar extends StatelessWidget {
  const Sidebar({
@@ -1107,4 +1204,93 @@ class AppColors {
 }
 
 
+// Placeholder screens for navigation destinations
+class CalendarScreen extends StatelessWidget {
+  const CalendarScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Calendar')),
+    );
+  }
+}
 
+class OutlookScreen extends StatelessWidget {
+  const OutlookScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Outlook')),
+    );
+  }
+}
+
+class TasksScreen extends StatelessWidget {
+  const TasksScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('All Tasks')),
+    );
+  }
+}
+
+class GoalsScreen extends StatelessWidget {
+  const GoalsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Goals')),
+    );
+  }
+}
+
+class AchievementsScreen extends StatelessWidget {
+  const AchievementsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Achievements')),
+    );
+  }
+}
+
+class GamesScreen extends StatelessWidget {
+  const GamesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Games')),
+    );
+  }
+}
+
+class PopOutScreen extends StatelessWidget {
+  const PopOutScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Pop out')),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Settings')),
+    );
+  }
+}
+
+class SignOutScreen extends StatelessWidget {
+  const SignOutScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Sign Out')),
+    );
+  }
+}
