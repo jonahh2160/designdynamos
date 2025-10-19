@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:designdynamos/ui/responive/responsive_layout.dart';
 import 'package:designdynamos/ui/screen/dashboard/dashboard_binding.dart';
 import 'package:designdynamos/ui/screen/dashboard/dashboard_screen.dart';
+import 'package:designdynamos/ui/widgets/custom_calendar.dart';
+
+
 
 class AppPages {
   AppPages._();
@@ -18,12 +21,9 @@ class AppPages {
     GetPage(
       name: "/calendar",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("calendar"),
-        ),
-      ),
+      content: CustomCalendar(),),
     ),
+
     GetPage(
       name: "/outlook",
       page: () => const ResponsiveLayout(
