@@ -4,6 +4,8 @@ import 'package:designdynamos/ui/responive/responsive_layout.dart';
 import 'package:designdynamos/ui/screen/dashboard/dashboard_binding.dart';
 import 'package:designdynamos/ui/screen/dashboard/dashboard_screen.dart';
 import 'package:designdynamos/ui/widgets/custom_calendar.dart';
+import 'package:designdynamos/features/outlook/pages/outlook_screen.dart';
+
 
 
 
@@ -27,12 +29,9 @@ class AppPages {
     GetPage(
       name: "/outlook",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("outlook"),
-        ),
+        content: OutlookScreen(),),
       ),
-    ),
+    
     GetPage(
       name: "/tasks",
       page: () => const ResponsiveLayout(
