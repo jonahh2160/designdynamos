@@ -1,12 +1,12 @@
-import 'package:designdynamos/core/models/tag_info.dart';
+import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/core/widgets/action_chip_button.dart';
-import 'package:designdynamos/core/widgets/status_pip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/add_task_card.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/add_task_dialog.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/finished_section_header.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
-import 'package:designdynamos/features/dashboard/utils/dashboard_constants.dart';
+import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -23,55 +23,38 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<TaskProvider>().refreshToday());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<TaskProvider>().refreshToday(),
+    );
   }
 
-  Future<void> _showAddTaskDialog(BuildContext context) async {
+  Future<void> _handleAddTask() async {
     if (_isAdding) return;
-    final controller = TextEditingController();
-    final title = await showDialog<String>(
+
+    final draft = await showDialog<TaskDraft>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Add task'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Task title'),
-          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+      builder: (_) => const AddTaskDialog(),
     );
-    if (title != null && title.isNotEmpty) {
-      if (!context.mounted) return;
-      final provider = context.read<TaskProvider>();
-      setState(() => _isAdding = true);
-      try {
-        await provider.addQuickTask(title);
-        if (!context.mounted) return;
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Task added')),
-        );
-      } catch (e) {
-        if (!context.mounted) return;
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.showSnackBar(
-          SnackBar(content: Text('Failed to add task: $e')),
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isAdding = false);
-        }
+
+    if (draft == null) return;
+    if (!mounted) return;
+
+    final provider = context.read<TaskProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _isAdding = true);
+    try {
+      await provider.createTask(draft);
+      if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(content: Text('Task added')));
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to add task: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isAdding = false);
       }
     }
   }
@@ -81,8 +64,9 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     final p = context.watch<TaskProvider>();
     if (p.isLoading) return const Center(child: CircularProgressIndicator());
 
-    final open = p.today.where((t) => !t.is_done).toList();
-    final finished = p.today.where((t) => t.is_done).toList();
+    final open = p.today.where((t) => !t.isDone).toList();
+    final finished = p.today.where((t) => t.isDone).toList();
+    final selectedTaskId = p.selectedTask?.id;
 
     return Scaffold(
       body: SafeArea(
@@ -136,9 +120,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                             for (final task in open)
                               TaskCard(
                                 task: task,
+                                isSelected: task.id == selectedTaskId,
+                                onTap: () => p.selectTask(task.id),
                                 onToggle: () => context
                                     .read<TaskProvider>()
-                                    .toggle(task.id, !task.is_done),
+                                    .toggleDone(task.id, !task.isDone),
                               ),
                             const SizedBox(height: 16),
                             FinishedSectionHeader(
@@ -148,14 +134,16 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                             for (final task in finished)
                               TaskCard(
                                 task: task,
+                                isSelected: task.id == selectedTaskId,
+                                onTap: () => p.selectTask(task.id),
                                 onToggle: () => context
                                     .read<TaskProvider>()
-                                    .toggle(task.id, !task.is_done),
+                                    .toggleDone(task.id, !task.isDone),
                               ),
                             const SizedBox(height: 16),
                             AddTaskCard(
-                              onPressed: () => _showAddTaskDialog(context),
-                              isLoading: _isAdding,
+                              onPressed: _handleAddTask,
+                              isLoading: _isAdding || p.isCreating,
                             ),
                           ],
                         ),
@@ -165,24 +153,80 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                 ),
               ),
               const SizedBox(width: 24),
-              const SizedBox(
-                width: 300,
+              SizedBox(
+                width: 320,
                 child: TaskDetailPanel(
-                  title: 'Make Bed',
-                  score: 9,
-                  subtasks: DashboardConstants.makeBedSubtasks,
-                  tags: [
-                    TagInfo(label: 'Due Oct. 4', icon: Icons.event_available),
-                    TagInfo(label: 'Goals', icon: Icons.flag_outlined),
-                    TagInfo(
-                      label: 'Self Care',
-                      icon: Icons.local_florist_outlined,
-                    ),
-                    TagInfo(
-                      label: 'Priority 9',
-                      icon: Icons.priority_high_outlined,
-                    ),
-                  ],
+                  task: p.selectedTask,
+                  onToggleComplete: (done) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await p.toggleDone(task.id, done);
+                    } catch (error) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update task: $error'),
+                        ),
+                      );
+                    }
+                  },
+                  onDueDateChange: (date) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await p.updateTask(task.id, dueDate: date);
+                    } catch (error) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update due date: $error'),
+                        ),
+                      );
+                    }
+                  },
+                  onClearDueDate: () async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await p.updateTask(task.id, clearDueDate: true);
+                    } catch (error) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to clear due date: $error'),
+                        ),
+                      );
+                    }
+                  },
+                  onPriorityChange: (priority) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await p.updateTask(task.id, priority: priority);
+                    } catch (error) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update priority: $error'),
+                        ),
+                      );
+                    }
+                  },
+                  onIconChange: (iconName) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await p.updateTask(task.id, iconName: iconName);
+                    } catch (error) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update icon: $error'),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ),
             ],

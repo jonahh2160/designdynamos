@@ -2,61 +2,123 @@ class TaskItem {
   const TaskItem({
     required this.id,
     required this.title,
-    //required this.icon,
+    required this.iconName,
     required this.points,
-    required this.is_done,
+    required this.isDone,
     this.notes,
-    this.start_date,
-    this.due_date,
-    this.priority = 5,//5 by default cause why not
-    this.order_hint = 1000,
+    this.startDate,
+    this.dueDate,
+    this.priority = 5,
+    this.orderHint = 1000,
+    this.completedAt,
   });
 
   final String id;
   final String title;
-  //final IconData icon;
+  final String iconName;
   final int points;
-  final bool is_done;
+  final bool isDone;
   final String? notes;
-  final DateTime? start_date;
-  final DateTime? due_date;
+  final DateTime? startDate;
+  final DateTime? dueDate;
   final int priority;
-  final int order_hint;
+  final int orderHint;
+  final DateTime? completedAt;
 
-  factory TaskItem.fromMap(Map<String, dynamic> m) => TaskItem( 
-      id: m['id'] as String,
-      title: m['title'] as String,
-      //icon: m['icon'] as IconData,
-      points: (m['points'] ?? 10) as int,
-      is_done: (m['is_done'] ?? false) as bool,
-      notes: m['notes'] as String?,
-      start_date: m['start_date'] != null ? DateTime.parse(m['start_date']) : null,
-      due_date: m['due_date'] != null ? DateTime.parse(m['due_date']) : null,
-      priority: (m['priority'] ?? 5) is int ? m['priority'] : int.tryParse(m['priority'] ?? '5') ?? 5,
-      order_hint: (m['order_hint'] ?? 1000) as int,
-  );
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
 
-  Map<String, dynamic> toInsert() => {
+  static int _parseInt(dynamic value, int fallback) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  factory TaskItem.fromMap(Map<String, dynamic> map) {
+    return TaskItem(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      iconName: (map['icon_name'] ?? 'task_alt') as String,
+      points: (map['points'] ?? 10) as int,
+      isDone: (map['is_done'] ?? false) as bool,
+      notes: map['notes'] as String?,
+      startDate: _parseDateTime(map['start_date']),
+      dueDate: _parseDateTime(map['due_date']),
+      priority: _parseInt(map['priority'], 5),
+      orderHint: (map['order_hint'] ?? 1000) as int,
+      completedAt: _parseDateTime(map['completed_at']),
+    );
+  }
+
+  Map<String, dynamic> toInsertRow(String userId) => {
+    'user_id': userId,
     'title': title,
+    'icon_name': iconName,
     'notes': notes,
-    'start_date': start_date?.toIso8601String(),
-    'due_date': due_date?.toIso8601String(),
+    'start_date': startDate?.toIso8601String(),
+    'due_date': dueDate?.toIso8601String(),
     'points': points,
     'priority': priority,
-    'order_hint': order_hint,
+    'order_hint': orderHint,
+    'is_done': isDone,
+    if (completedAt != null) 'completed_at': completedAt!.toIso8601String(),
   };
 
-  TaskItem copyWith({bool? isDone}) =>
-      TaskItem(
-        id: id,
-        title: title,
-        //icon: icon,
-        points: points,
-        is_done: is_done ?? this.is_done,
-        notes: notes,
-        start_date: start_date,
-        due_date: due_date,
-        priority: priority,
-        order_hint: order_hint,
-      );
+  Map<String, dynamic> toUpdateRow({
+    bool clearDueDate = false,
+    DateTime? overrideCompletedAt,
+  }) {
+    final data = <String, dynamic>{
+      'title': title,
+      'icon_name': iconName,
+      'notes': notes,
+      'start_date': startDate?.toIso8601String(),
+      'due_date': clearDueDate ? null : dueDate?.toIso8601String(),
+      'points': points,
+      'priority': priority,
+      'order_hint': orderHint,
+      'is_done': isDone,
+    };
+
+    final completed = overrideCompletedAt ?? completedAt;
+    data['completed_at'] = completed?.toIso8601String();
+
+    data.removeWhere((_, value) => value == null);
+    return data;
+  }
+
+  TaskItem copyWith({
+    String? id,
+    String? title,
+    String? iconName,
+    int? points,
+    bool? isDone,
+    String? notes,
+    DateTime? startDate,
+    DateTime? dueDate,
+    bool clearDueDate = false,
+    int? priority,
+    int? orderHint,
+    DateTime? completedAt,
+  }) {
+    return TaskItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      iconName: iconName ?? this.iconName,
+      points: points ?? this.points,
+      isDone: isDone ?? this.isDone,
+      notes: notes ?? this.notes,
+      startDate: startDate ?? this.startDate,
+      dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      priority: priority ?? this.priority,
+      orderHint: orderHint ?? this.orderHint,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
 }

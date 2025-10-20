@@ -40,9 +40,9 @@ class AddTaskCard extends StatelessWidget {
                 child: Text(
                   'Add task',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               AnimatedSwitcher(
@@ -57,8 +57,9 @@ class AddTaskCard extends StatelessWidget {
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             AppColors.textPrimary,
                           ),
-                          backgroundColor:
-                              AppColors.sidebarActive.withOpacity(0.4),
+                          backgroundColor: AppColors.sidebarActive.withOpacity(
+                            0.4,
+                          ),
                         ),
                       )
                     : Row(
