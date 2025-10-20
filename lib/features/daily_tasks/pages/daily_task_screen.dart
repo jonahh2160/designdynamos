@@ -7,13 +7,34 @@ import 'package:designdynamos/features/daily_tasks/widgets/finished_section_head
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/utils/dashboard_constants.dart';
+import 'package:designdynamos/providers/task_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 
-class DailyTaskScreen extends StatelessWidget {
+
+
+class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
   @override
+  State<DailyTaskScreen> createState() => _DailyTaskScreenState();
+}
+
+class _DailyTaskScreenState extends State<DailyTaskScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => context.read<TaskProvider>().refreshToday());
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final p = context.watch<TaskProvider>();
+    if (p.isLoading) return const Center(child: CircularProgressIndicator());
+
+    final open = p.today.where((t) => !t.isDone).toList();
+    final finished = p.today.where((t) => t.isDone).toList();
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -25,11 +46,11 @@ class DailyTaskScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const ProgressOverview(
-                      completed: 8,
-                      total: 11,
-                      coins: 600,
-                      streakLabel: '8/11 tasks completed',
+                    ProgressOverview(
+                      completed: finished.length,
+                      total: p.today.length,
+                      coins: 600, //TODO: read from profile provider
+                      streakLabel: '${finished.length}/${p.today.length} tasks completed',
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -56,21 +77,26 @@ class DailyTaskScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Expanded(
+
+                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 16),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final task in DashboardConstants.todayTasks)
-                              TaskCard(task: task),
+                            for (final task in open)
+                              TaskCard(
+                                task: task,
+                                onToggle: () => context.read<TaskProvider>().toggle(task.id, !task.isDone),
+                              ),
                             const SizedBox(height: 16),
-                            const FinishedSectionHeader(title: 'Finished - 8'),
+                            FinishedSectionHeader(title: 'Finished - ${finished.length}'),
                             const SizedBox(height: 12),
-                            for (final task in DashboardConstants.completedTasks)
-                              TaskCard(task: task),
+                            for (final task in finished)
+                              TaskCard(
+                                task: task,
+                                onToggle: () => context.read<TaskProvider>().toggle(task.id, !task.isDone),
+                              ),
                             const SizedBox(height: 16),
-                            const AddTaskCard(),
+                            AddTaskCard(), // wire onTap => show dialog to addQuickTask
                           ],
                         ),
                       ),
