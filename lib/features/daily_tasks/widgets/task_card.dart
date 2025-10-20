@@ -11,7 +11,7 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool completed = task.isDone;
+    final bool completed = task.is_done;
     final Color backgroundColor = completed
         ? AppColors.completedCard
         : AppColors.taskCard;

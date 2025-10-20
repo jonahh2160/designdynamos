@@ -11,9 +11,6 @@ import 'package:designdynamos/providers/task_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-
-
-
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
   @override
@@ -21,10 +18,62 @@ class DailyTaskScreen extends StatefulWidget {
 }
 
 class _DailyTaskScreenState extends State<DailyTaskScreen> {
+  bool _isAdding = false;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<TaskProvider>().refreshToday());
+    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<TaskProvider>().refreshToday());
+  }
+
+  Future<void> _showAddTaskDialog(BuildContext context) async {
+    if (_isAdding) return;
+    final controller = TextEditingController();
+    final title = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Add task'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Task title'),
+          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (title != null && title.isNotEmpty) {
+      if (!context.mounted) return;
+      final provider = context.read<TaskProvider>();
+      setState(() => _isAdding = true);
+      try {
+        await provider.addQuickTask(title);
+        if (!context.mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Task added')),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to add task: $e')),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isAdding = false);
+        }
+      }
+    }
   }
 
   @override
@@ -32,8 +81,8 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     final p = context.watch<TaskProvider>();
     if (p.isLoading) return const Center(child: CircularProgressIndicator());
 
-    final open = p.today.where((t) => !t.isDone).toList();
-    final finished = p.today.where((t) => t.isDone).toList();
+    final open = p.today.where((t) => !t.is_done).toList();
+    final finished = p.today.where((t) => t.is_done).toList();
 
     return Scaffold(
       body: SafeArea(
@@ -50,14 +99,16 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       completed: finished.length,
                       total: p.today.length,
                       coins: 600, //TODO: read from profile provider
-                      streakLabel: '${finished.length}/${p.today.length} tasks completed',
+                      streakLabel:
+                          '${finished.length}/${p.today.length} tasks completed',
                     ),
                     const SizedBox(height: 24),
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            'October 4',
+                            DateTime.now()
+                                .toIso8601String(), //TODO: Convert to fromat October 20
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.w600,
@@ -78,25 +129,34 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                     Expanded(
+                    Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
                             for (final task in open)
                               TaskCard(
                                 task: task,
-                                onToggle: () => context.read<TaskProvider>().toggle(task.id, !task.isDone),
+                                onToggle: () => context
+                                    .read<TaskProvider>()
+                                    .toggle(task.id, !task.is_done),
                               ),
                             const SizedBox(height: 16),
-                            FinishedSectionHeader(title: 'Finished - ${finished.length}'),
+                            FinishedSectionHeader(
+                              title: 'Finished - ${finished.length}',
+                            ),
                             const SizedBox(height: 12),
                             for (final task in finished)
                               TaskCard(
                                 task: task,
-                                onToggle: () => context.read<TaskProvider>().toggle(task.id, !task.isDone),
+                                onToggle: () => context
+                                    .read<TaskProvider>()
+                                    .toggle(task.id, !task.is_done),
                               ),
                             const SizedBox(height: 16),
-                            AddTaskCard(), // wire onTap => show dialog to addQuickTask
+                            AddTaskCard(
+                              onPressed: () => _showAddTaskDialog(context),
+                              isLoading: _isAdding,
+                            ),
                           ],
                         ),
                       ),

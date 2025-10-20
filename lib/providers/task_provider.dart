@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:designdynamos/core/models/task_item.dart';
-import 'package:designdynamos/data/services/supabase_service.dart';
+import 'package:designdynamos/data/services/task_service.dart';
 
 class TaskProvider extends ChangeNotifier{
   TaskProvider(this._svc);
@@ -28,9 +28,9 @@ class TaskProvider extends ChangeNotifier{
       id: 'tmp-${DateTime.now().microsecondsSinceEpoch}',
       title: title,
       points: 10,
-      isDone: false,
-      dueDate: DateTime.now(),
-      orderHint: (_today.isEmpty ? 1000 : _today.last.orderHint + 1000),
+      is_done: false,
+      due_date: DateTime.now(),
+      order_hint: (_today.isEmpty ? 1000 : _today.last.order_hint + 1000),
     
     );
 
@@ -45,12 +45,12 @@ class TaskProvider extends ChangeNotifier{
                   id: newId,
                   title: t.title,
                   points: t.points,
-                  isDone: t.isDone,
+                  is_done: t.is_done,
                   notes: t.notes,
-                  startDate: t.startDate,
-                  dueDate: t.dueDate,
+                  start_date: t.start_date,
+                  due_date: t.due_date,
                   priority: t.priority,
-                  orderHint: t.orderHint,
+                  order_hint: t.order_hint,
                 )
               : t)
           .toList();

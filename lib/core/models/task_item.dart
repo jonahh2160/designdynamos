@@ -1,52 +1,49 @@
-import 'package:flutter/material.dart';
-import 'tag_info.dart';
-
 class TaskItem {
   const TaskItem({
     required this.id,
     required this.title,
     //required this.icon,
     required this.points,
-    required this.isDone,
+    required this.is_done,
     this.notes,
-    this.startDate,
-    this.dueDate,
+    this.start_date,
+    this.due_date,
     this.priority = 5,//5 by default cause why not
-    this.orderHint = 1000,
+    this.order_hint = 1000,
   });
 
   final String id;
   final String title;
   //final IconData icon;
   final int points;
-  final bool isDone;
+  final bool is_done;
   final String? notes;
-  final DateTime? startDate;
-  final DateTime? dueDate;
+  final DateTime? start_date;
+  final DateTime? due_date;
   final int priority;
-  final int orderHint;
+  final int order_hint;
 
   factory TaskItem.fromMap(Map<String, dynamic> m) => TaskItem( 
       id: m['id'] as String,
       title: m['title'] as String,
       //icon: m['icon'] as IconData,
       points: (m['points'] ?? 10) as int,
-      isDone: (m['isDone'] ?? false) as bool,
+      is_done: (m['is_done'] ?? false) as bool,
       notes: m['notes'] as String?,
-      startDate: m['startDate'] != null ? DateTime.parse(m['startDate']) : null,
-      dueDate: m['dueDate'] != null ? DateTime.parse(m['dueDate']) : null,
+      start_date: m['start_date'] != null ? DateTime.parse(m['start_date']) : null,
+      due_date: m['due_date'] != null ? DateTime.parse(m['due_date']) : null,
       priority: (m['priority'] ?? 5) is int ? m['priority'] : int.tryParse(m['priority'] ?? '5') ?? 5,
-      orderHint: (m['orderHint'] ?? 1000) as int,
+      order_hint: (m['order_hint'] ?? 1000) as int,
   );
 
   Map<String, dynamic> toInsert() => {
     'title': title,
     'notes': notes,
-    'start_date': startDate?.toIso8601String(),
-    'due_date': dueDate?.toIso8601String(),
+    'start_date': start_date?.toIso8601String(),
+    'due_date': due_date?.toIso8601String(),
     'points': points,
     'priority': priority,
-    'orderHint': orderHint,
+    'order_hint': order_hint,
   };
 
   TaskItem copyWith({bool? isDone}) =>
@@ -55,11 +52,11 @@ class TaskItem {
         title: title,
         //icon: icon,
         points: points,
-        isDone: isDone ?? this.isDone,
+        is_done: is_done ?? this.is_done,
         notes: notes,
-        startDate: startDate,
-        dueDate: dueDate,
+        start_date: start_date,
+        due_date: due_date,
         priority: priority,
-        orderHint: orderHint,
+        order_hint: order_hint,
       );
 }
