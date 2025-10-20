@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 
+import 'package:designdynamos/ui/widgets/large_box.dart';
+
 class OutlookScreen extends StatelessWidget {
   const OutlookScreen({super.key});
 
@@ -28,20 +30,21 @@ class OutlookScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
-            // Top title text
+
+            // Title
             Text(
               "Outlook",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 30
+                    fontSize: 30,
                   ),
             ),
+
             const SizedBox(height: 40),
-            
-            
-            Center( // ⬅️ vertically centers inside that space// Scrollable boxes
+
+            // Scrollable boxes section
+            Center(
               child: SizedBox(
-              
                 height: 700,
                 child: Scrollbar(
                   controller: scrollController,
@@ -54,56 +57,25 @@ class OutlookScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
                     itemBuilder: (context, index) {
                       final day = days[index];
-                      final formattedDate = DateFormat('EEEE, MMM d').format(day); // Example: "Monday, Oct 21"
+                      final formattedDate =
+                          DateFormat('EEEE, MMM d').format(day); // e.g. "Monday, Oct 21"
 
-                      return Container(
-                        width: 500,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.subtaskBackground,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 6,
-                              offset: Offset(2, 2),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: AppColors.textMuted ?? Colors.grey,
-                            width: 1.5
-                          ),
+                      // Use your reusable widget here
+                      return LargeBox(
+                        label: formattedDate,
+                        child: const Text(
+                          "Events go here",
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(
-                              color: Colors.white70,
-                              thickness: 1,
-                            ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              "Events go here",
-                              style: TextStyle(color: Colors.white70, fontSize: 16),
-                            ),
-                          ],
-                        ),
+                      )
                       );
                     },
                   ),
-              ),
+                ),
               ),
             ),
-            
           ],
         ),
       ),

@@ -62,11 +62,8 @@ class AppPages {
     GetPage(
       name: "/achievements",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("achievements"),
-        ),
-      ),
+        content: OutlookScreen(),),
+      
     ),
     GetPage(
       name: "/games",
