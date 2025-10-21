@@ -6,17 +6,22 @@ class TaskService {
   TaskService(this._sb);
 
   Future<List<TaskItem>> getTodayTasks() async {
-    final today = DateTime.now();
-    final from = DateTime(today.year, today.month, today.day);
-    final to = from.add(const Duration(days: 1));
+    // Ensure we only fetch tasks for the current authenticated user
+    final userId = _sb.auth.currentUser?.id;
+    if (userId == null) {
+      // No user session; return empty to avoid RLS errors
+      return const [];
+    }
+
+    final day = _formatDateOnly(DateTime.now());
 
     final response = await _sb
         .from('tasks')
         .select(
           'id, title, icon_name, notes, start_date, due_date, points, priority, order_hint, is_done, completed_at',
         )
-        .gte('due_date', from.toIso8601String())
-        .lt('due_date', to.toIso8601String())
+        .eq('user_id', userId)
+        .or('due_date.eq.$day,start_date.eq.$day')
         .order('is_done', ascending: true)
         .order('order_hint', ascending: true);
 
@@ -54,7 +59,7 @@ class TaskService {
     if (clearDueDate) {
       payload['due_date'] = null;
     } else if (dueDate != null) {
-      payload['due_date'] = dueDate.toIso8601String();
+      payload['due_date'] = _formatDateOnly(dueDate);
     }
 
     if (priority != null) payload['priority'] = priority;
@@ -62,7 +67,7 @@ class TaskService {
     if (isDone != null) {
       payload['is_done'] = isDone;
       payload['completed_at'] = isDone
-          ? (completedAt ?? DateTime.now()).toIso8601String()
+          ? (completedAt ?? DateTime.now()).toUtc().toIso8601String()
           : null;
     }
 
@@ -77,4 +82,11 @@ class TaskService {
   Future<void> reorder(String taskId, int newHint) async {
     await _sb.from('tasks').update({'order_hint': newHint}).eq('id', taskId);
   }
+}
+
+String _formatDateOnly(DateTime date) {
+  final y = date.year.toString();
+  final m = date.month.toString().padLeft(2, '0');
+  final d = date.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
 }

@@ -8,8 +8,12 @@ import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+
+import 'package:intl/intl.dart';
 
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
@@ -19,13 +23,25 @@ class DailyTaskScreen extends StatefulWidget {
 
 class _DailyTaskScreenState extends State<DailyTaskScreen> {
   bool _isAdding = false;
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<TaskProvider>().refreshToday(),
-    );
+    // Initial fetch after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null){
+        context.read<TaskProvider>().refreshToday();
+      }
+    });
+
+    //Ensure we refresh once auth session is available (e.g., after app start) and refetch when auth state changes
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      if (mounted && event.session != null){
+        context.read<TaskProvider>().refreshToday();
+      }
+    });
   }
 
   Future<void> _handleAddTask() async {
@@ -62,7 +78,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<TaskProvider>();
-    if (p.isLoading) return const Center(child: CircularProgressIndicator());
+    if (p.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     final open = p.today.where((t) => !t.isDone).toList();
     final finished = p.today.where((t) => t.isDone).toList();
@@ -91,8 +111,8 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            DateTime.now()
-                                .toIso8601String(), //TODO: Convert to fromat October 20
+                            DateFormat('MMMM d').format(DateTime.now()), //TODO: Convert to fromat October 20
+
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.w600,
@@ -234,5 +254,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 }

@@ -26,7 +26,8 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => TaskProvider(TaskService(SupabaseService.client)),
+          create: (_) => TaskProvider(TaskService(SupabaseService.client))
+            ..refreshToday(),
         ),
       ],
       child: const MyApp(),

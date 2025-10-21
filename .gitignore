@@ -13,6 +13,10 @@
 .swiftpm/
 migrate_working_dir/
 
+#keys
+.env
+launch.json
+
 # Flutter repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat

@@ -3,13 +3,12 @@ import 'package:designdynamos/core/env/env.dart';
 
 
 class SupabaseService {
-  static SupabaseClient get client => Supabase.instance.client;
 
   static Future<void> init() async {
 
     await Supabase.initialize(
       url: Env.supabaseUrl,
-      anonKey: Env.supbaseAnonKey,
+      anonKey: Env.supabaseAnonKey,
       authOptions: const FlutterAuthClientOptions(
         autoRefreshToken: true,
       ),
@@ -19,11 +18,13 @@ class SupabaseService {
   static Future<AuthResponse> signInWithTestUser(){
     return client.auth.signInWithPassword(
       email: 'elongsworth37@gmail.com',
-      password: 'test123',
+      password: 'test321',
     );
   }
 
   static Future<void> signOut() => client.auth.signOut();
+
+  static SupabaseClient get client => Supabase.instance.client;
 
 
 }

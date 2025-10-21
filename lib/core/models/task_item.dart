@@ -29,9 +29,33 @@ class TaskItem {
     if (value == null) return null;
     if (value is DateTime) return value;
     if (value is String && value.isNotEmpty) {
-      return DateTime.tryParse(value);
+      //handling common timestamp variants returned by PostgREST
+      String s = value.trim();
+      //normalizing space separator to 'T'
+      if (s.contains(' ') && !s.contains('T')) {
+        s = s.replaceFirst(' ', 'T');
+      }
+      //ensuring timezone offset has colon, e.g. +00 -> +00:00, +0000 -> +00:00
+      final tzNoColon = RegExp(r"[+-]\d{2}(?!:)\d{2}$");
+      final tzShort = RegExp(r"[+-]\d{2}$");
+      if (tzNoColon.hasMatch(s)) {
+        s = s.replaceFirst(RegExp(r"([+-]\d{2})(\d{2})$"), r"$1:$2");
+      } else if (tzShort.hasMatch(s)) {
+        s = s + ":00";
+      }
+      //parse normalized string
+      return DateTime.tryParse(s) ?? DateTime.tryParse(value);
     }
     return null;
+  }
+
+  static String? _dateOnlyString(DateTime? value) {
+    if (value == null) return null;
+    final local = value; //treating as local date selection from UI
+    final y = local.year.toString();
+    final m = local.month.toString().padLeft(2, '0');
+    final d = local.day.toString().padLeft(2, '0');
+    return "$y-$m-$d";
   }
 
   static int _parseInt(dynamic value, int fallback) {
@@ -61,13 +85,14 @@ class TaskItem {
     'title': title,
     'icon_name': iconName,
     'notes': notes,
-    'start_date': startDate?.toIso8601String(),
-    'due_date': dueDate?.toIso8601String(),
+    //DB columns are DATE; store YYYY-MM-DD only
+    'start_date': _dateOnlyString(startDate),
+    'due_date': _dateOnlyString(dueDate),
     'points': points,
     'priority': priority,
     'order_hint': orderHint,
     'is_done': isDone,
-    if (completedAt != null) 'completed_at': completedAt!.toIso8601String(),
+    if (completedAt != null) 'completed_at': completedAt!.toUtc().toIso8601String(),
   };
 
   Map<String, dynamic> toUpdateRow({
@@ -78,8 +103,9 @@ class TaskItem {
       'title': title,
       'icon_name': iconName,
       'notes': notes,
-      'start_date': startDate?.toIso8601String(),
-      'due_date': clearDueDate ? null : dueDate?.toIso8601String(),
+      //DB columns are DATE; store YYYY-MM-DD only
+      'start_date': _dateOnlyString(startDate),
+      'due_date': clearDueDate ? null : _dateOnlyString(dueDate),
       'points': points,
       'priority': priority,
       'order_hint': orderHint,
@@ -87,7 +113,7 @@ class TaskItem {
     };
 
     final completed = overrideCompletedAt ?? completedAt;
-    data['completed_at'] = completed?.toIso8601String();
+    data['completed_at'] = completed?.toUtc().toIso8601String();
 
     data.removeWhere((_, value) => value == null);
     return data;
