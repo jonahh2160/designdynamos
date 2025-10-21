@@ -1,13 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:designdynamos/ui/screen/dashboard/dashboad_controller.dart';
-import 'package:designdynamos/ui/widgets/card_announce_medium.dart';
-import 'package:designdynamos/ui/widgets/headline.dart';
-import 'package:designdynamos/ui/widgets/navigate_button.dart';
-import 'package:designdynamos/ui/widgets/card_with_transparent_border.dart';
-import 'package:designdynamos/ui/widgets/subtitle.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/material.dart';
-import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/ui/widgets/large_box.dart';
 
 class AchievementsScreen extends StatelessWidget {
@@ -23,7 +14,7 @@ class AchievementsScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 30),
 
-            // Main title
+            //Main title
             Text(
               "Achievements",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -34,7 +25,7 @@ class AchievementsScreen extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // Row of boxes
+            //Row of boxes
             SizedBox(
               height: 700,
               child: Row(

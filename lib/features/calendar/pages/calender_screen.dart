@@ -13,7 +13,7 @@ class CalendarScreen extends StatelessWidget {
       body: Align(
         alignment: Alignment.centerLeft,
         child: SizedBox(
-          width: 900, // makes it a clean centered panel
+          width: 900, //makes it a clean centered panel
           child: CustomCalendar(),
         ),
       ),

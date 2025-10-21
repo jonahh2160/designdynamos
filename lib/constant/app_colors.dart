@@ -8,6 +8,6 @@ class AppColors {
   static const indigo = Colors.indigo;
   static const indigoAccent = Colors.indigoAccent;
 
-  // Appbar
+  //Appbar
   static final appbarBackground = Colors.red[900];
 }

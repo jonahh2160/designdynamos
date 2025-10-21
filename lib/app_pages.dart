@@ -75,12 +75,12 @@ class AppPages {
       ),
     ),
 
-    // GetPage(
-    //   name: "/",
-    //   page: () => DashboardPage(),
-    //   bindings: [
-    //     OverviewBinding(),
-    //   ],
-    // ),
+    //GetPage(
+    //  name: "/",
+    //  page: () => DashboardPage(),
+    //  bindings: [
+    //    OverviewBinding(),
+    //  ],
+    //),
   ];
 }

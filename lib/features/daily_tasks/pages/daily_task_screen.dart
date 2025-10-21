@@ -28,17 +28,17 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   @override
   void initState() {
     super.initState();
-    // Initial fetch after first frame
+    //initial fetch after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final session = Supabase.instance.client.auth.currentSession;
-      if (session != null){
+      if (session != null) {
         context.read<TaskProvider>().refreshToday();
       }
     });
 
-    //Ensure we refresh once auth session is available (e.g., after app start) and refetch when auth state changes
+    //ensuring we refresh once auth session is available (e.g., after app start) and refetch when auth state changes
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      if (mounted && event.session != null){
+      if (mounted && event.session != null) {
         context.read<TaskProvider>().refreshToday();
       }
     });
@@ -79,9 +79,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<TaskProvider>();
     if (p.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final open = p.today.where((t) => !t.isDone).toList();
@@ -111,7 +109,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            DateFormat('MMMM d').format(DateTime.now()), //TODO: Convert to fromat October 20
+                            DateFormat('MMMM d').format(DateTime.now()),
 
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
@@ -145,6 +143,9 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 onToggle: () => context
                                     .read<TaskProvider>()
                                     .toggleDone(task.id, !task.isDone),
+                                subtaskDone: p.subtaskProgress(task.id).$1,
+                                subtaskTotal: p.subtaskProgress(task.id).$2,
+                                labels: p.labelsOf(task.id),
                               ),
                             const SizedBox(height: 16),
                             FinishedSectionHeader(
@@ -159,6 +160,9 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 onToggle: () => context
                                     .read<TaskProvider>()
                                     .toggleDone(task.id, !task.isDone),
+                                subtaskDone: p.subtaskProgress(task.id).$1,
+                                subtaskTotal: p.subtaskProgress(task.id).$2,
+                                labels: p.labelsOf(task.id),
                               ),
                             const SizedBox(height: 16),
                             AddTaskCard(
@@ -177,6 +181,15 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                 width: 320,
                 child: TaskDetailPanel(
                   task: p.selectedTask,
+                  subtasks: p.selectedTask == null
+                      ? const []
+                      : p.subtasksOf(p.selectedTask!.id),
+                  labels: p.selectedTask == null
+                      ? {}
+                      : p.labelsOf(p.selectedTask!.id),
+                  note: p.selectedTask == null
+                      ? null
+                      : p.noteOf(p.selectedTask!.id),
                   onToggleComplete: (done) async {
                     final task = p.selectedTask;
                     if (task == null) return;
@@ -246,6 +259,36 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                         ),
                       );
                     }
+                  },
+                  onAddSubtask: (title) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    await p.addSubtask(task.id, title);
+                  },
+                  onToggleSubtask: (sid, done) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    await p.toggleSubtask(task.id, sid, done);
+                  },
+                  onDeleteSubtask: (sid) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    await p.deleteSubtask(task.id, sid);
+                  },
+                  onDeleteTask: () async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    await p.deleteTask(task.id);
+                  },
+                  onToggleLabel: (name, enabled) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    await p.toggleLabel(task.id, name, enabled);
+                  },
+                  onSaveNote: (content) async {
+                    final task = p.selectedTask;
+                    if (task == null) return;
+                    await p.setNote(task.id, content);
                   },
                 ),
               ),

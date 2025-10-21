@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
 
 class AddTaskDialog extends StatefulWidget {
@@ -14,14 +15,23 @@ class AddTaskDialog extends StatefulWidget {
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
   DateTime? _dueDate = DateTime.now();
   int _priority = 5;
   String _selectedIcon = TaskIconRegistry.defaultOption.name;
   String? _errorText;
+  final List<TextEditingController> _subtaskControllers = [];
+  final TextEditingController _labelInputController = TextEditingController();
+  final Set<String> _labels = <String>{};
 
   @override
   void dispose() {
     _titleController.dispose();
+    _notesController.dispose();
+    for (final c in _subtaskControllers) {
+      c.dispose();
+    }
+    _labelInputController.dispose();
     super.dispose();
   }
 
@@ -59,12 +69,23 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       return;
     }
 
+    final subtasks = _subtaskControllers
+        .map((c) => c.text.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final labels = Set<String>.from(_labels);
+
     Navigator.of(context).pop(
       TaskDraft(
         title: title,
         iconName: _selectedIcon,
         dueDate: _dueDate ?? DateTime.now(),
         priority: _priority,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        subtasks: subtasks,
+        labels: labels,
       ),
     );
   }
@@ -120,6 +141,48 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ],
             ),
             const SizedBox(height: 16),
+            TextField(
+              controller: _notesController,
+              maxLines: 3,
+              decoration: const InputDecoration(hintText: 'Notes (optional)'),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Labels',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final name in _labels)
+                  TagChip(
+                    label: name,
+                    onDeleted: () => setState(() => _labels.remove(name)),
+                  ),
+                SizedBox(
+                  width: 220,
+                  child: TextField(
+                    controller: _labelInputController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add label and press Enter',
+                    ),
+                    onSubmitted: (value) {
+                      final name = value.trim();
+                      if (name.isEmpty) return;
+                      setState(() {
+                        _labels.add(name);
+                        _labelInputController.clear();
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 const Text(
@@ -161,6 +224,46 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   _selectedIcon = value;
                 });
               },
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Subtasks',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < _subtaskControllers.length; i++) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _subtaskControllers[i],
+                      decoration: InputDecoration(hintText: 'Subtask ${i + 1}'),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Remove',
+                    onPressed: () {
+                      setState(() {
+                        final c = _subtaskControllers.removeAt(i);
+                        c.dispose();
+                      });
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            TextButton.icon(
+              onPressed: () {
+                setState(
+                  () => _subtaskControllers.add(TextEditingController()),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add subtask'),
             ),
           ],
         ),

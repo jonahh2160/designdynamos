@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 
 class LargeBox extends StatelessWidget {
-  final String label;       // Title text (can be a date or anything)
-  final Widget? child;      // Optional child content
+  final String label;       //Title text (can be a date or anything)
+  final Widget? child;      //Optional child content
 
   const LargeBox({
     super.key,
@@ -28,7 +27,7 @@ class LargeBox extends StatelessWidget {
           ),
         ],
         border: Border.all(
-          color: AppColors.textMuted ?? Colors.grey,
+          color: AppColors.textMuted,
           width: 1.5,
         ),
       ),

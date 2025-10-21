@@ -92,7 +92,8 @@ class TaskItem {
     'priority': priority,
     'order_hint': orderHint,
     'is_done': isDone,
-    if (completedAt != null) 'completed_at': completedAt!.toUtc().toIso8601String(),
+    if (completedAt != null)
+      'completed_at': completedAt!.toUtc().toIso8601String(),
   };
 
   Map<String, dynamic> toUpdateRow({

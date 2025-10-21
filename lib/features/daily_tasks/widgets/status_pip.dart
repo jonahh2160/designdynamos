@@ -2,7 +2,7 @@ import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class StatusPip extends StatelessWidget {
-  const StatusPip({ super.key, required this.isCompleted});
+  const StatusPip({super.key, required this.isCompleted});
 
   final bool isCompleted;
 

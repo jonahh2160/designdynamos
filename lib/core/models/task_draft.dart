@@ -8,6 +8,8 @@ class TaskDraft {
     this.priority = 5,
     this.notes,
     this.points = 10,
+    this.subtasks = const <String>[],
+    this.labels = const <String>{},
   });
 
   final String title;
@@ -16,6 +18,8 @@ class TaskDraft {
   final int priority;
   final String? notes;
   final int points;
+  final List<String> subtasks;
+  final Set<String> labels;
 
   TaskItem toTask({
     required String id,

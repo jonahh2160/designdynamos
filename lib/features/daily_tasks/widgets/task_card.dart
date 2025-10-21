@@ -1,3 +1,5 @@
+import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:flutter/material.dart';
 
 import 'package:designdynamos/core/models/task_item.dart';
@@ -13,12 +15,18 @@ class TaskCard extends StatelessWidget {
     this.onToggle,
     this.onTap,
     this.isSelected = false,
+    this.subtaskDone = 0,
+    this.subtaskTotal = 0,
+    this.labels = const {},
   });
 
   final TaskItem task;
   final VoidCallback? onToggle;
   final VoidCallback? onTap;
   final bool isSelected;
+  final int subtaskDone;
+  final int subtaskTotal;
+  final Set<String> labels;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +94,12 @@ class TaskCard extends StatelessWidget {
                     children: [
                       Text(task.title, style: titleStyle),
                       const SizedBox(height: 6),
-                      _MetadataRow(task: task),
+                      _MetadataRow(
+                        task: task,
+                        done: subtaskDone,
+                        total: subtaskTotal,
+                        labels: labels,
+                      ),
                     ],
                   ),
                 ),
@@ -118,61 +131,68 @@ class TaskCard extends StatelessWidget {
 }
 
 class _MetadataRow extends StatelessWidget {
-  const _MetadataRow({required this.task});
+  const _MetadataRow({
+    required this.task,
+    required this.done,
+    required this.total,
+    required this.labels,
+  });
 
   final TaskItem task;
+  final int done;
+  final int total;
+  final Set<String> labels;
 
   @override
   Widget build(BuildContext context) {
     final chips = <Widget>[];
+    //Subtask progress
+    if (total > 0) {
+      chips.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 64,
+              child: LinearProgressIndicator(
+                value: (done / total).clamp(0, 1).toDouble(),
+                backgroundColor: AppColors.textPrimary.withOpacity(0.18),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.accent,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$done/$total',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
     if (task.dueDate != null) {
       chips.add(
-        _MetaChip(
+        MetaChip(
           icon: Icons.calendar_today_outlined,
           label: _formatDueDate(task.dueDate!),
         ),
       );
     }
+    //Label chips
+    for (final name in labels) {
+      chips.add(TagChip(label: name));
+    }
     chips.add(
-      _MetaChip(icon: Icons.flag_outlined, label: 'Priority ${task.priority}'),
+      MetaChip(icon: Icons.flag_outlined, label: 'Priority ${task.priority}'),
     );
     if (task.isDone) {
-      chips.add(_MetaChip(icon: Icons.check_circle_outline, label: 'Done'));
+      chips.add(MetaChip(icon: Icons.check_circle_outline, label: 'Done'));
     }
 
     return Wrap(spacing: 8, runSpacing: 8, children: chips);
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.sidebarActive.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.textPrimary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

@@ -20,8 +20,8 @@ class DashboardConstants {
     NavItemData(Icons.logout, 'Sign Out'),
   ];
 
-  // Task lists now come from the database via TaskProvider.
-  // Keep only static demo data unrelated to TaskItem here.
+  //Task lists now come from the database via TaskProvider.
+  //Keep only static demo data unrelated to TaskItem here.
 
   static const List<SubtaskItem> makeBedSubtasks = [
     SubtaskItem(title: 'Wash bedding', completed: true),

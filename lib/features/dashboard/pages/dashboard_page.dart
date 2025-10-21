@@ -110,7 +110,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           onTap: () {
                             setState(() => selectedIndex = index);
                             if (index == 0) {
-                              // When navigating back to Daily Tasks, refresh from server
+                              //When navigating back to Daily Tasks, refresh from server
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (mounted) {
                                   context.read<TaskProvider>().refreshToday();
@@ -129,7 +129,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         );
                       }),
                       const Spacer(),
-                      // Secondary nav items
+                      //Secondary nav items
                       ...List.generate(
                         secondaryDestLength,
                         (i) {
@@ -159,7 +159,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
               Expanded(
                 child: Container(
-                  // Use the app's scaffold background to avoid the greenish tint
+                  //Use the app's scaffold background to avoid the greenish tint
                   color: Theme.of(context).scaffoldBackgroundColor,
                   child: page,
                 ),

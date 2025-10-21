@@ -1,13 +1,6 @@
 import "package:flutter/material.dart";
-import 'package:designdynamos/ui/screen/dashboard/dashboad_controller.dart';
-import 'package:designdynamos/ui/widgets/card_announce_medium.dart';
-import 'package:designdynamos/ui/widgets/headline.dart';
-import 'package:designdynamos/ui/widgets/navigate_button.dart';
-import 'package:designdynamos/ui/widgets/card_with_transparent_border.dart';
-import 'package:designdynamos/ui/widgets/subtitle.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/material.dart';
-import 'package:designdynamos/core/theme/app_colors.dart';
+
 
 import 'package:designdynamos/ui/widgets/large_box.dart';
 
@@ -18,7 +11,7 @@ class OutlookScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final ScrollController scrollController = ScrollController();
 
-    // generate a list of 14 days starting from today
+    //generate a list of 14 days starting from today
     final DateTime today = DateTime.now();
     final List<DateTime> days =
         List.generate(14, (index) => today.add(Duration(days: index)));
@@ -31,7 +24,7 @@ class OutlookScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 30),
 
-            // Title
+            //Title
             Text(
               "Outlook",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -42,7 +35,7 @@ class OutlookScreen extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // Scrollable boxes section
+            //Scrollable boxes section
             Center(
               child: SizedBox(
                 height: 700,
@@ -58,9 +51,9 @@ class OutlookScreen extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final day = days[index];
                       final formattedDate =
-                          DateFormat('EEEE, MMM d').format(day); // e.g. "Monday, Oct 21"
+                          DateFormat('EEEE, MMM d').format(day); //e.g. "Monday, Oct 21"
 
-                      // Use your reusable widget here
+                      //Use your reusable widget here
                       return LargeBox(
                         label: formattedDate,
                         child: const Text(

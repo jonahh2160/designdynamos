@@ -27,7 +27,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
       margin: const EdgeInsets.only(top: 24, left: 16, right: 16, bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.subtaskBackground ?? Colors.blueGrey,
+        color: AppColors.subtaskBackground,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -37,7 +37,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
           ),
         ],
         border: Border.all(
-          color: AppColors.textMuted ?? Colors.grey,
+          color: AppColors.textMuted,
           width: 1.5
         ),
       ),
@@ -65,8 +65,8 @@ class _CustomCalendarState extends State<CustomCalendar> {
         ),
 
         daysOfWeekStyle: const DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: AppColors.textPrimary ?? Colors.white),
-            weekendStyle: TextStyle(color: AppColors.textPrimary  ?? Colors.white),
+            weekdayStyle: TextStyle(color: AppColors.textPrimary),
+            weekendStyle: TextStyle(color: AppColors.textPrimary),
         ),
 
         
@@ -74,32 +74,32 @@ class _CustomCalendarState extends State<CustomCalendar> {
           tablePadding: const EdgeInsets.only(top: 15),
           outsideDaysVisible: false,
           cellMargin: const EdgeInsets.all(4),
-          defaultTextStyle: const TextStyle(color: AppColors.textPrimary ?? Colors.white),
-          weekendTextStyle: const TextStyle(color: AppColors.textPrimary ?? Colors.white),
+          defaultTextStyle: const TextStyle(color: AppColors.textPrimary),
+          weekendTextStyle: const TextStyle(color: AppColors.textPrimary),
           cellPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
 
         defaultDecoration: BoxDecoration(
           shape: BoxShape.rectangle,
-          color: AppColors.subtaskBackground ?? Colors.white,
+          color: AppColors.subtaskBackground ,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.textSecondary ?? Colors.grey, width: 1),
+          border: Border.all(color: AppColors.textSecondary, width: 1),
         ),
 
          weekendDecoration: BoxDecoration(
           shape: BoxShape.rectangle,
-          color: AppColors.subtaskBackground ?? Colors.white,
+          color: AppColors.subtaskBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.textSecondary ?? Colors.grey, width: 1),
+          border: Border.all(color: AppColors.textSecondary , width: 1),
         ),
         todayDecoration: BoxDecoration(
           shape: BoxShape.rectangle,
-          color: (AppColors.taskCardHighlight ?? Colors.blue).withOpacity(0.3),
+          color: (AppColors.taskCardHighlight ).withOpacity(0.3),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.transparent),
         ),
         selectedDecoration: BoxDecoration(
           shape: BoxShape.rectangle,
-          color: AppColors.taskCard ?? Colors.blueAccent,
+          color: AppColors.taskCard,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.transparent),
         ),

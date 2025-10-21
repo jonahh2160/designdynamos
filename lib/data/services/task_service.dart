@@ -4,12 +4,13 @@ import 'package:designdynamos/core/models/task_item.dart';
 class TaskService {
   final SupabaseClient _sb;
   TaskService(this._sb);
+  SupabaseClient get client => _sb;
 
   Future<List<TaskItem>> getTodayTasks() async {
-    // Ensure we only fetch tasks for the current authenticated user
+    //ensuring we only fetch tasks for the current authenticated user
     final userId = _sb.auth.currentUser?.id;
     if (userId == null) {
-      // No user session; return empty to avoid RLS errors
+      //no user session; return empty to avoid RLS errors
       return const [];
     }
 
@@ -81,6 +82,48 @@ class TaskService {
 
   Future<void> reorder(String taskId, int newHint) async {
     await _sb.from('tasks').update({'order_hint': newHint}).eq('id', taskId);
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    await _sb.from('tasks').delete().eq('id', taskId);
+  }
+
+  //Notes CRUD
+  Future<String?> fetchNote(String taskId) async {
+    final response = await _sb
+        .from('task_notes')
+        .select('id, content')
+        .eq('task_id', taskId)
+        .limit(1)
+        .maybeSingle();
+    if (response == null) return null;
+    return response['content'] as String?;
+  }
+
+  Future<void> upsertNote(String taskId, String? content) async {
+    final existing = await _sb
+        .from('task_notes')
+        .select('id')
+        .eq('task_id', taskId)
+        .limit(1)
+        .maybeSingle();
+    if (content == null || content.trim().isEmpty) {
+      if (existing != null) {
+        await _sb.from('task_notes').delete().eq('id', existing['id']);
+      }
+      return;
+    }
+    if (existing == null) {
+      await _sb.from('task_notes').insert({
+        'task_id': taskId,
+        'content': content,
+      });
+    } else {
+      await _sb
+          .from('task_notes')
+          .update({'content': content})
+          .eq('id', existing['id']);
+    }
   }
 }
 
