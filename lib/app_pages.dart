@@ -3,6 +3,11 @@ import 'package:get/get.dart';
 import 'package:designdynamos/ui/responive/responsive_layout.dart';
 import 'package:designdynamos/ui/screen/dashboard/dashboard_binding.dart';
 import 'package:designdynamos/ui/screen/dashboard/dashboard_screen.dart';
+import 'package:designdynamos/ui/widgets/custom_calendar.dart';
+import 'package:designdynamos/features/outlook/pages/outlook_screen.dart';
+
+
+
 
 class AppPages {
   AppPages._();
@@ -18,21 +23,15 @@ class AppPages {
     GetPage(
       name: "/calendar",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("calendar"),
-        ),
-      ),
+      content: CustomCalendar(),),
     ),
+
     GetPage(
       name: "/outlook",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("outlook"),
-        ),
+        content: OutlookScreen(),),
       ),
-    ),
+    
     GetPage(
       name: "/tasks",
       page: () => const ResponsiveLayout(
@@ -63,11 +62,8 @@ class AppPages {
     GetPage(
       name: "/achievements",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("achievements"),
-        ),
-      ),
+        content: OutlookScreen(),),
+      
     ),
     GetPage(
       name: "/games",
@@ -79,12 +75,12 @@ class AppPages {
       ),
     ),
 
-    // GetPage(
-    //   name: "/",
-    //   page: () => DashboardPage(),
-    //   bindings: [
-    //     OverviewBinding(),
-    //   ],
-    // ),
+    //GetPage(
+    //  name: "/",
+    //  page: () => DashboardPage(),
+    //  bindings: [
+    //    OverviewBinding(),
+    //  ],
+    //),
   ];
 }

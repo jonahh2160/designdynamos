@@ -1,20 +1,37 @@
-import 'package:designdynamos/core/models/task_item.dart';
-import 'package:designdynamos/core/theme/app_colors.dart';
-import 'package:designdynamos/features/daily_tasks/widgets/icon_container.dart';
-import 'package:designdynamos/features/daily_tasks/widgets/status_pip.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:flutter/material.dart';
 
+import 'package:designdynamos/core/models/task_item.dart';
+import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/icon_container.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/status_pip.dart';
 
 class TaskCard extends StatelessWidget {
-  const TaskCard({super.key, required this.task});
+  const TaskCard({
+    super.key,
+    required this.task,
+    this.onToggle,
+    this.onTap,
+    this.isSelected = false,
+    this.subtaskDone = 0,
+    this.subtaskTotal = 0,
+    this.labels = const {},
+  });
 
   final TaskItem task;
+  final VoidCallback? onToggle;
+  final VoidCallback? onTap;
+  final bool isSelected;
+  final int subtaskDone;
+  final int subtaskTotal;
+  final Set<String> labels;
 
   @override
   Widget build(BuildContext context) {
-    final bool completed = task.completed;
-    final Color backgroundColor = completed
+    final bool completed = task.isDone;
+    final Color baseColor = completed
         ? AppColors.completedCard
         : AppColors.taskCard;
     final Color textColor = completed
@@ -37,97 +54,171 @@ class TaskCard extends StatelessWidget {
               : TextDecoration.none,
         );
 
+    final borderColor = isSelected
+        ? AppColors.accent
+        : completed
+        ? AppColors.completedBorder
+        : Colors.transparent;
+    final borderWidth = isSelected ? 2.0 : (completed ? 1.4 : 0.0);
+
+    final iconData = TaskIconRegistry.iconFor(task.iconName);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: backgroundColor,
+      child: Material(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
           borderRadius: BorderRadius.circular(22),
-          border: completed
-              ? Border.all(color: AppColors.completedBorder, width: 1.4)
-              : null,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            StatusPip(isCompleted: completed),
-            const SizedBox(width: 14),
-            IconContainer(icon: task.icon, isCompleted: completed),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(task.title, style: titleStyle),
-                  if (!completed &&
-                      (task.progress != null || task.metadata.isNotEmpty))
-                    const SizedBox(height: 10),
-                  if (!completed && task.progress != null)
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 90,
-                          height: 6,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: task.progress!.clamp(0, 1),
-                              backgroundColor: AppColors.progressTrack
-                                  .withOpacity(0.6),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppColors.taskCardHighlight,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (task.progressLabel != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            task.progressLabel!,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  if (!completed && task.metadata.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 6,
-                      children: task.metadata
-                          .map((tag) => TagChip(tag: tag))
-                          .toList(),
-                    ),
-                  ],
-                ],
-              ),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: borderColor, width: borderWidth),
             ),
-            if (!completed && task.score != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: onToggle,
+                  behavior: HitTestBehavior.translucent,
+                  child: StatusPip(isCompleted: completed),
                 ),
-                decoration: BoxDecoration(
-                  color: AppColors.scoreBadge.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '${task.score}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: 14),
+                IconContainer(icon: iconData, isCompleted: completed),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(task.title, style: titleStyle),
+                      const SizedBox(height: 6),
+                      _MetadataRow(
+                        task: task,
+                        done: subtaskDone,
+                        total: subtaskTotal,
+                        labels: labels,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-          ],
+                if (task.points > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.scoreBadge.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${task.points}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class _MetadataRow extends StatelessWidget {
+  const _MetadataRow({
+    required this.task,
+    required this.done,
+    required this.total,
+    required this.labels,
+  });
+
+  final TaskItem task;
+  final int done;
+  final int total;
+  final Set<String> labels;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[];
+    //Subtask progress
+    if (total > 0) {
+      chips.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 64,
+              child: LinearProgressIndicator(
+                value: (done / total).clamp(0, 1).toDouble(),
+                backgroundColor: AppColors.textPrimary.withOpacity(0.18),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.accent,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$done/$total',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+    if (task.dueDate != null) {
+      chips.add(
+        MetaChip(
+          icon: Icons.calendar_today_outlined,
+          label: _formatDueDate(task.dueDate!),
+        ),
+      );
+    }
+    //Label chips
+    for (final name in labels) {
+      chips.add(TagChip(label: name));
+    }
+    chips.add(
+      MetaChip(icon: Icons.flag_outlined, label: 'Priority ${task.priority}'),
+    );
+    if (task.isDone) {
+      chips.add(MetaChip(icon: Icons.check_circle_outline, label: 'Done'));
+    }
+
+    return Wrap(spacing: 8, runSpacing: 8, children: chips);
+  }
+}
+
+String _formatDueDate(DateTime date) {
+  final today = DateUtils.dateOnly(DateTime.now());
+  final target = DateUtils.dateOnly(date);
+  final diff = target.difference(today).inDays;
+
+  if (diff == 0) return 'Due Today';
+  if (diff == 1) return 'Due Tomorrow';
+  if (diff == -1) return 'Due Yesterday';
+
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final month = months[target.month - 1];
+  return '$month ${target.day}';
 }

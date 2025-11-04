@@ -13,6 +13,8 @@ import 'package:designdynamos/features/settings/pages/settings_screen.dart';
 import 'package:designdynamos/features/tasks/pages/tasks_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:designdynamos/features/daily_tasks/pages/daily_task_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:designdynamos/providers/task_provider.dart';
 
 
 class DashboardPage extends StatefulWidget {
@@ -107,6 +109,14 @@ class _DashboardPageState extends State<DashboardPage> {
                         return GestureDetector(
                           onTap: () {
                             setState(() => selectedIndex = index);
+                            if (index == 0) {
+                              //When navigating back to Daily Tasks, refresh from server
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) {
+                                  context.read<TaskProvider>().refreshToday();
+                                }
+                              });
+                            }
                           },
                           child: SidebarButton(
                             item: NavItemData(
@@ -119,7 +129,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         );
                       }),
                       const Spacer(),
-                      // Secondary nav items
+                      //Secondary nav items
                       ...List.generate(
                         secondaryDestLength,
                         (i) {
@@ -149,7 +159,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
               Expanded(
                 child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  //Use the app's scaffold background to avoid the greenish tint
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   child: page,
                 ),
               ),

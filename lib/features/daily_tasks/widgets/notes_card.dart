@@ -1,7 +1,6 @@
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
-
 class NotesCard extends StatelessWidget {
   const NotesCard({super.key});
 

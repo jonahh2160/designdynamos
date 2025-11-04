@@ -1,34 +1,44 @@
-import 'package:designdynamos/core/models/tag_info.dart';
-import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:designdynamos/core/theme/app_colors.dart';
 
 class TagChip extends StatelessWidget {
-  const TagChip({super.key, required this.tag});
+  const TagChip({super.key, required this.label, this.onDeleted});
 
-  final TagInfo tag;
+  final String label;
+  final VoidCallback? onDeleted;
 
   @override
   Widget build(BuildContext context) {
+    final text = label.trim().isEmpty ? label : label.trim();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.sidebarActive,
-        borderRadius: BorderRadius.circular(14),
+        //Match the greenish meta chip background used for dates
+        color: AppColors.sidebarActive.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (tag.icon != null) ...[
-            Icon(tag.icon, size: 14, color: AppColors.textSecondary),
-            const SizedBox(width: 6),
-          ],
           Text(
-            tag.label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.textSecondary,
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (onDeleted != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onDeleted,
+              behavior: HitTestBehavior.opaque,
+              child: const Icon(
+                Icons.close,
+                size: 14,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
         ],
       ),
     );

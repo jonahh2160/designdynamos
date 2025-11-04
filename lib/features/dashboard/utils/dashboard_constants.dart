@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:designdynamos/core/models/nav_item_data.dart';
 import 'package:designdynamos/core/models/subtask_item.dart';
-import 'package:designdynamos/core/models/tag_info.dart';
-import 'package:designdynamos/core/models/task_item.dart';
 
 class DashboardConstants {
   static const List<NavItemData> mainDestinations = [
@@ -22,38 +20,8 @@ class DashboardConstants {
     NavItemData(Icons.logout, 'Sign Out'),
   ];
 
-  //need to pull from database
-  static const List<TaskItem> todayTasks = [
-    TaskItem(
-      title: 'Make Bed',
-      icon: Icons.bed,
-      score: 9,
-      progress: 0.5,
-      progressLabel: '1/2',
-      metadata: [
-        TagInfo(label: 'Due Today', icon: Icons.calendar_today_outlined),
-        TagInfo(label: 'Self Care', icon: Icons.self_improvement_outlined),
-      ],
-    ),
-    TaskItem(
-      title: 'Drink Water',
-      icon: Icons.local_drink,
-      score: 6,
-      metadata: [TagInfo(label: 'Self Care', icon: Icons.water_drop_outlined)],
-    ),
-    TaskItem(
-      title: 'Eat Breakfast',
-      icon: Icons.restaurant,
-      score: 7,
-      metadata: [TagInfo(label: 'Health', icon: Icons.favorite_outline)],
-    ),
-  ];
-
-  static const List<TaskItem> completedTasks = [
-    TaskItem(title: 'Do something', icon: Icons.check, completed: true),
-    TaskItem(title: 'Do something', icon: Icons.check, completed: true),
-    TaskItem(title: 'Do something', icon: Icons.check, completed: true),
-  ];
+  //Task lists now come from the database via TaskProvider.
+  //Keep only static demo data unrelated to TaskItem here.
 
   static const List<SubtaskItem> makeBedSubtasks = [
     SubtaskItem(title: 'Wash bedding', completed: true),

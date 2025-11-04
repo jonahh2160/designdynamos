@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  provider: ^6.0.5
+  intl: ^0.20.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -37,6 +39,9 @@ dependencies:
   percent_indicator: ^4.2.2 # Circular and Linear percent indicators
   dio: ^5.9.0
   get: ^4.6.5
+  table_calendar: ^3.2.0
+  supabase_flutter: ^2.5.4
+
 
 dev_dependencies:
   flutter_test:

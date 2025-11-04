@@ -8,9 +8,31 @@ import 'core/theme/app_theme.dart';
 //custom data strucutres
 import 'core/models/nav_item_data.dart';
 
+import 'package:provider/provider.dart';
+import 'package:designdynamos/data/services/supabase_service.dart';
+import 'providers/task_provider.dart';
+import 'data/services/task_service.dart';
 
-void main() {
-  runApp(const MyApp());
+
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseService.init(); //initialize Supabase
+
+  await SupabaseService.signInWithTestUser(); //for testing
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => TaskProvider(TaskService(SupabaseService.client))
+            ..refreshToday(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
