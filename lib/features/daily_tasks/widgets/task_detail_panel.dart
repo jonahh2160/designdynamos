@@ -28,6 +28,7 @@ class TaskDetailPanel extends StatelessWidget {
     required this.onToggleLabel,
     required this.note,
     required this.onSaveNote,
+    required this.onClose,
   });
 
   final TaskItem? task;
@@ -45,6 +46,7 @@ class TaskDetailPanel extends StatelessWidget {
   final Future<void> Function(String name, bool enabled) onToggleLabel;
   final String? note;
   final Future<void> Function(String? content) onSaveNote;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +154,14 @@ class TaskDetailPanel extends StatelessWidget {
                       },
                       icon: const Icon(
                         Icons.delete_outline,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Hide details',
+                      onPressed: onClose,
+                      icon: const Icon(
+                        Icons.close,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -308,8 +318,9 @@ class TaskDetailPanel extends StatelessWidget {
                         );
                       },
                     );
-                    if (title != null && title.isNotEmpty)
+                    if (title != null && title.isNotEmpty) {
                       await onAddSubtask(title);
+                    }
                   },
                   icon: const Icon(Icons.add, color: AppColors.textSecondary),
                   label: const Text('Add subtask'),
@@ -395,7 +406,7 @@ class _DetailTile extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary.withOpacity(0.8),
+                        color: AppColors.textSecondary.withValues(alpha: 0.8),
                       ),
                     ),
                     const SizedBox(height: 2),
