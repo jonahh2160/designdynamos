@@ -33,7 +33,7 @@ class TaskProvider extends ChangeNotifier {
     final list = _subtasksByTask[taskId] ?? const [];
     final total = list.length;
     final done = list.where((s) => s.isDone).length;
-    return (done, total);
+    return (done, total); //tuple of done and total
   }
 
   String? noteOf(String taskId) => _notesByTask[taskId];
@@ -58,6 +58,7 @@ class TaskProvider extends ChangeNotifier {
       if (_today.isEmpty) {
         _selectedTaskId = null;
       } else if (_selectedTaskId == null ||
+          //.any is a method that checks if any element in the collection satisfies the given condition
           !_today.any((t) => t.id == _selectedTaskId)) {
         _selectedTaskId = _today.first.id;
       }
@@ -105,7 +106,7 @@ class TaskProvider extends ChangeNotifier {
       final created = await _service.createTask(tempTask);
       _today = _today
           .map((task) => task.id == tempId ? created : task)
-          .toList(growable: false);
+          .toList();
       _selectedTaskId = created.id;
 
       //Optional: notes
@@ -140,7 +141,7 @@ class TaskProvider extends ChangeNotifier {
     } catch (error) {
       _today = _today
           .where((task) => task.id != tempId)
-          .toList(growable: false);
+          .toList();
       rethrow;
     } finally {
       _creating = false;
@@ -231,6 +232,7 @@ class TaskProvider extends ChangeNotifier {
       //rollback
       _today.insert(idx, removed);
       notifyListeners();
+      print('Failed to delete task: $e');
       rethrow;
     }
   }

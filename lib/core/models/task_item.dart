@@ -41,7 +41,7 @@ class TaskItem {
       if (tzNoColon.hasMatch(s)) {
         s = s.replaceFirst(RegExp(r"([+-]\d{2})(\d{2})$"), r"$1:$2");
       } else if (tzShort.hasMatch(s)) {
-        s = s + ":00";
+        s = "$s:00";
       }
       //parse normalized string
       return DateTime.tryParse(s) ?? DateTime.tryParse(value);
@@ -64,6 +64,8 @@ class TaskItem {
     return fallback;
   }
 
+  //factory construtor is a special type of constructor that can return an instance of the class(existing, chached, new, or even subclass)
+  //dynamic type is a special type that allows a variable to hold values of any type, and type can change durring runtime
   factory TaskItem.fromMap(Map<String, dynamic> map) {
     return TaskItem(
       id: map['id'] as String,

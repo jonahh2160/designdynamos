@@ -6,6 +6,7 @@ class TaskService {
   TaskService(this._sb);
   SupabaseClient get client => _sb;
 
+  //Future is the result of an asynchronous operation that may not be immediately available
   Future<List<TaskItem>> getTodayTasks() async {
     //ensuring we only fetch tasks for the current authenticated user
     final userId = _sb.auth.currentUser?.id;
@@ -26,9 +27,8 @@ class TaskService {
         .order('is_done', ascending: true)
         .order('order_hint', ascending: true);
 
-    final List<Map<String, dynamic>> res = (response as List)
-        .cast<Map<String, dynamic>>();
-    return res.map(TaskItem.fromMap).toList(growable: false);
+    final List<Map<String, dynamic>> res = (response as List).cast<Map<String, dynamic>>();
+    return res.map(TaskItem.fromMap).toList();
   }
 
   Future<TaskItem> createTask(TaskItem task) async {
@@ -85,7 +85,22 @@ class TaskService {
   }
 
   Future<void> deleteTask(String taskId) async {
-    await _sb.from('tasks').delete().eq('id', taskId);
+    final userId = _sb.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Cannot delete task without an authenticated user.');
+    }
+
+    //remove dependent rows first so RLS policies do not block the task delete.
+    await _sb.from('goal_steps').update({'task_id': null}).eq('task_id', taskId);
+    await _sb.from('task_labels').delete().eq('task_id', taskId);
+    await _sb.from('task_notes').delete().eq('task_id', taskId);
+    await _sb.from('subtasks').delete().eq('task_id', taskId);
+
+    await _sb
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+        .eq('user_id', userId);
   }
 
   //Notes CRUD
