@@ -24,39 +24,18 @@ class TaskService {
 
     final dayStr = _formatDateOnly(day);
 
-    //base: tasks strictly tied to the day (due OR start equals day)
-    final orParts = <String>[
-      'due_date.eq.$dayStr',
-      'start_date.eq.$dayStr',
-    ];
+    final response = await _sb.rpc(
+      'get_daily_tasks_rpc',
+      params: {
+        'day': dayStr,
+        'include_overdue': includeOverdue,
+        'include_spanning': includeSpanning,
+        'include_undated': includeUndated,
+      },
+    );
 
-    //including overdue, still open
-    if (includeOverdue) {
-      orParts.add('and(is_done.eq.false,due_date.lt.$dayStr)');
-    }
-
-    //including ongoing span where today is within [start_date, due_date] window
-    if (includeSpanning) {
-      orParts.add('and(start_date.lte.$dayStr,or(due_date.is.null,due_date.gte.$dayStr))');
-    }
-
-    //including undated, still open backlog tasks
-    if (includeUndated) {
-      orParts.add('and(is_done.eq.false,start_date.is.null,due_date.is.null)');
-    }
-
-    final response = await _sb
-        .from('tasks')
-        .select(
-          'id, title, icon_name, notes, start_date, due_date, points, priority, order_hint, is_done, completed_at',
-        )
-        .eq('user_id', userId)
-        .or(orParts.join(','))
-        .order('is_done', ascending: true)
-        .order('priority', ascending: false)
-        .order('order_hint', ascending: true);
-
-    final List<Map<String, dynamic>> res = (response as List).cast<Map<String, dynamic>>();
+    final List<Map<String, dynamic>> res =
+        (response as List).cast<Map<String, dynamic>>();
     return res.map(TaskItem.fromMap).toList();
   }
 
@@ -122,12 +101,6 @@ class TaskService {
       throw StateError('Cannot delete task without an authenticated user.');
     }
 
-    //remove dependent rows first so RLS policies do not block the task delete.
-    await _sb.from('goal_steps').update({'task_id': null}).eq('task_id', taskId);
-    await _sb.from('task_labels').delete().eq('task_id', taskId);
-    await _sb.from('task_notes').delete().eq('task_id', taskId);
-    await _sb.from('subtasks').delete().eq('task_id', taskId);
-
     await _sb
         .from('tasks')
         .delete()
@@ -148,29 +121,19 @@ class TaskService {
   }
 
   Future<void> upsertNote(String taskId, String? content) async {
-    final existing = await _sb
-        .from('task_notes')
-        .select('id')
-        .eq('task_id', taskId)
-        .limit(1)
-        .maybeSingle();
-    if (content == null || content.trim().isEmpty) {
-      if (existing != null) {
-        await _sb.from('task_notes').delete().eq('id', existing['id']);
-      }
+    final trimmed = content?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      await _sb.from('task_notes').delete().eq('task_id', taskId);
       return;
     }
-    if (existing == null) {
-      await _sb.from('task_notes').insert({
+
+    await _sb.from('task_notes').upsert(
+      {
         'task_id': taskId,
-        'content': content,
-      });
-    } else {
-      await _sb
-          .from('task_notes')
-          .update({'content': content})
-          .eq('id', existing['id']);
-    }
+        'content': trimmed,
+      },
+      onConflict: 'task_id',
+    );
   }
 }
 
