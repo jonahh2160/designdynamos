@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
@@ -16,7 +17,7 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  DateTime? _dueDate = DateTime.now();
+  DateTime? _dueAt = _defaultDueAt(DateTime.now());
   int _priority = 5;
   String _selectedIcon = TaskIconRegistry.defaultOption.name;
   String? _errorText;
@@ -37,7 +38,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   Future<void> _pickDueDate() async {
     final now = DateTime.now();
-    final initial = _dueDate ?? now;
+    final initial = (_dueAt ?? _defaultDueAt(now)).toLocal();
 
     final picked = await showDatePicker(
       context: context,
@@ -49,14 +50,43 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
     if (picked != null) {
       setState(() {
-        _dueDate = DateTime(picked.year, picked.month, picked.day);
+        final current = _dueAt ?? _defaultDueAt(now);
+        _dueAt = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          current.hour,
+          current.minute,
+        );
       });
     }
   }
 
-  void _clearDueDate() {
+  Future<void> _pickDueTime() async {
+    final now = DateTime.now();
+    final base = (_dueAt ?? _defaultDueAt(now)).toLocal();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: base.hour, minute: base.minute),
+      helpText: 'Select due time',
+    );
+    if (picked != null) {
+      setState(() {
+        final currentDate = _dueAt ?? _defaultDueAt(now);
+        _dueAt = DateTime(
+          currentDate.year,
+          currentDate.month,
+          currentDate.day,
+          picked.hour,
+          picked.minute,
+        );
+      });
+    }
+  }
+
+  void _clearDueAt() {
     setState(() {
-      _dueDate = null;
+      _dueAt = null;
     });
   }
 
@@ -79,7 +109,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       TaskDraft(
         title: title,
         iconName: _selectedIcon,
-        dueDate: _dueDate ?? DateTime.now(),
+        dueAt: _dueAt ?? _defaultDueAt(DateTime.now()),
         priority: _priority,
         notes: _notesController.text.trim().isEmpty
             ? null
@@ -124,17 +154,25 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     onPressed: _pickDueDate,
                     icon: const Icon(Icons.calendar_today_outlined),
                     label: Text(
-                      _dueDate != null
-                          ? _formattedDate(_dueDate!)
-                          : 'Add due date',
+                      _dueAt != null ? _formattedDate(_dueAt!) : 'Add due date',
                     ),
                   ),
                 ),
-                if (_dueDate != null) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickDueTime,
+                    icon: const Icon(Icons.access_time),
+                    label: Text(
+                      _dueAt != null ? _formattedTime(_dueAt!) : 'Add due time',
+                    ),
+                  ),
+                ),
+                if (_dueAt != null) ...[
                   const SizedBox(width: 12),
                   IconButton(
                     tooltip: 'Clear due date',
-                    onPressed: _clearDueDate,
+                    onPressed: _clearDueAt,
                     icon: const Icon(Icons.close),
                   ),
                 ],
@@ -279,21 +317,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   }
 }
 
-String _formattedDate(DateTime date) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  final month = months[date.month - 1];
-  return '$month ${date.day}, ${date.year}';
+DateTime _defaultDueAt(DateTime reference) {
+  final local = reference.toLocal();
+  final truncated = DateTime(local.year, local.month, local.day, local.hour);
+  return truncated.add(const Duration(hours: 1));
 }
+
+String _formattedDate(DateTime date) =>
+    DateFormat.yMMMMd().format(date.toLocal());
+
+String _formattedTime(DateTime date) => DateFormat.jm().format(date.toLocal());

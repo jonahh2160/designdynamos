@@ -1,6 +1,7 @@
 import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:designdynamos/core/models/db_subtask.dart';
 
 import 'package:designdynamos/core/models/task_item.dart';
@@ -15,8 +16,9 @@ class TaskDetailPanel extends StatelessWidget {
     super.key,
     required this.task,
     required this.onToggleComplete,
-    required this.onDueDateChange,
-    required this.onClearDueDate,
+    required this.onDueAtChange,
+    required this.onDueTimeChange,
+    required this.onClearDueAt,
     required this.onPriorityChange,
     required this.onIconChange,
     required this.subtasks,
@@ -33,8 +35,9 @@ class TaskDetailPanel extends StatelessWidget {
 
   final TaskItem? task;
   final Future<void> Function(bool done) onToggleComplete;
-  final Future<void> Function(DateTime date) onDueDateChange;
-  final Future<void> Function() onClearDueDate;
+  final Future<void> Function(DateTime date) onDueAtChange;
+  final Future<void> Function(Duration timeOfDay) onDueTimeChange;
+  final Future<void> Function() onClearDueAt;
   final Future<void> Function(int priority) onPriorityChange;
   final Future<void> Function(String iconName) onIconChange;
   final List<DbSubtask> subtasks;
@@ -67,9 +70,12 @@ class TaskDetailPanel extends StatelessWidget {
     }
 
     final iconData = TaskIconRegistry.iconFor(task!.iconName);
-    final dueDateLabel = task!.dueDate != null
-        ? _formatLongDate(task!.dueDate!)
+    final dueDateLabel = task!.dueAt != null
+        ? _formatLongDate(task!.dueAt!)
         : 'Add due date';
+    final dueTimeLabel = task!.dueAt != null
+        ? DateFormat.jm().format(task!.dueAt!.toLocal())
+        : 'Add due time';
 
     return SingleChildScrollView(
       child: Column(
@@ -172,16 +178,16 @@ class TaskDetailPanel extends StatelessWidget {
                   icon: Icons.calendar_today_outlined,
                   title: 'Due date',
                   value: dueDateLabel,
-                  trailing: task!.dueDate != null
+                  trailing: task!.dueAt != null
                       ? IconButton(
                           tooltip: 'Clear due date',
-                          onPressed: onClearDueDate,
+                          onPressed: onClearDueAt,
                           icon: const Icon(Icons.close),
                         )
                       : null,
                   onTap: () async {
                     final now = DateTime.now();
-                    final initial = task!.dueDate ?? now;
+                    final initial = task!.dueAt ?? now;
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: initial,
@@ -190,8 +196,28 @@ class TaskDetailPanel extends StatelessWidget {
                       helpText: 'Select due date',
                     );
                     if (picked != null) {
-                      await onDueDateChange(
+                      await onDueAtChange(
                         DateTime(picked.year, picked.month, picked.day),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _DetailTile(
+                  icon: Icons.access_time,
+                  title: 'Due time',
+                  value: dueTimeLabel,
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final initial = task!.dueAt ?? now;
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(initial.toLocal()),
+                      helpText: 'Select due time',
+                    );
+                    if (picked != null) {
+                      await onDueTimeChange(
+                        Duration(hours: picked.hour, minutes: picked.minute),
                       );
                     }
                   },
@@ -216,8 +242,8 @@ class TaskDetailPanel extends StatelessWidget {
             child: _LabelsEditor(
               labels: labels,
               dueToday:
-                  task!.dueDate != null &&
-                  DateUtils.isSameDay(task!.dueDate, DateTime.now()),
+                  task!.dueAt != null &&
+                  DateUtils.isSameDay(task!.dueAt, DateTime.now()),
               onAdd: (name) => onToggleLabel(name, true),
               onRemove: (name) => onToggleLabel(name, false),
               priority: task!.priority,
@@ -476,24 +502,8 @@ class _PriorityTile extends StatelessWidget {
   }
 }
 
-String _formatLongDate(DateTime date) {
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  final month = months[date.month - 1];
-  return '$month ${date.day}, ${date.year}';
-}
+String _formatLongDate(DateTime date) =>
+    DateFormat.yMMMMd().add_jm().format(date.toLocal());
 
 class _NotesEditor extends StatefulWidget {
   const _NotesEditor({required this.initial, required this.onSave});

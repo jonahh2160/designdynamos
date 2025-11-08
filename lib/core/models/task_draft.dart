@@ -4,7 +4,8 @@ class TaskDraft {
   const TaskDraft({
     required this.title,
     required this.iconName,
-    this.dueDate,
+    this.startAt,
+    this.dueAt,
     this.priority = 5,
     this.notes,
     this.points = 10,
@@ -14,18 +15,35 @@ class TaskDraft {
 
   final String title;
   final String iconName;
-  final DateTime? dueDate;
+  final DateTime? startAt;
+  final DateTime? dueAt;
   final int priority;
   final String? notes;
   final int points;
   final List<String> subtasks;
   final Set<String> labels;
 
+  DateTime? get dueDateOnly {
+    final value = dueAt;
+    if (value == null) return null;
+    return DateTime(value.year, value.month, value.day);
+  }
+
+  Duration? get dueTimeOfDay {
+    final value = dueAt;
+    if (value == null) return null;
+    return Duration(hours: value.hour, minutes: value.minute);
+  }
+
   TaskItem toTask({
     required String id,
     required int orderHint,
-    DateTime? startDate,
+    DateTime? fallbackStartAt,
+    DateTime? fallbackDueAt,
   }) {
+    final resolvedStart = startAt ?? fallbackStartAt;
+    final resolvedDue = dueAt ?? fallbackDueAt ?? resolvedStart;
+
     return TaskItem(
       id: id,
       title: title,
@@ -33,8 +51,8 @@ class TaskDraft {
       points: points,
       isDone: false,
       notes: notes,
-      startDate: startDate,
-      dueDate: dueDate,
+      startDate: resolvedStart,
+      dueAt: resolvedDue,
       priority: priority,
       orderHint: orderHint,
     );

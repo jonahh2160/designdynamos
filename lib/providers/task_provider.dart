@@ -24,7 +24,7 @@ class TaskProvider extends ChangeNotifier {
   final Map<String, String?> _notesByTask = {};
   final Map<String, Set<String>> _labelsByTask = {};
 
-  // Daily filters/state
+  //Daily filters/state
   DateTime _day = DateTime.now();
   bool _includeOverdue = true;
   bool _includeSpanning = true;
@@ -116,14 +116,18 @@ class TaskProvider extends ChangeNotifier {
         : (_today.last.orderHint + 1000);
     final tempId = 'tmp-${DateTime.now().microsecondsSinceEpoch}';
     final now = DateTime.now();
+    final fallbackStart = draft.startAt ?? now;
+    final fallbackDue = draft.dueAt ?? _defaultDueAt(fallbackStart);
     final tempTask = draft.toTask(
       id: tempId,
       orderHint: nextOrderHint,
-      startDate: now,
+      fallbackStartAt: fallbackStart,
+      fallbackDueAt: fallbackDue,
     );
 
     _creating = true;
     _today = [..._today, tempTask];
+    _sortToday();
     _selectedTaskId = tempTask.id;
     notifyListeners();
 
@@ -132,6 +136,7 @@ class TaskProvider extends ChangeNotifier {
       _today = _today
           .map((task) => task.id == tempId ? created : task)
           .toList();
+      _sortToday();
       _selectedTaskId = created.id;
 
       //Optional: notes
@@ -164,9 +169,7 @@ class TaskProvider extends ChangeNotifier {
         _labelsByTask[created.id] = {...draft.labels};
       }
     } catch (error) {
-      _today = _today
-          .where((task) => task.id != tempId)
-          .toList();
+      _today = _today.where((task) => task.id != tempId).toList();
       rethrow;
     } finally {
       _creating = false;
@@ -184,6 +187,7 @@ class TaskProvider extends ChangeNotifier {
       completedAt: done ? DateTime.now() : null,
     );
     _today[index] = updated;
+    _sortToday();
     notifyListeners();
 
     try {
@@ -197,8 +201,10 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> updateTask(
     String id, {
-    DateTime? dueDate,
-    bool clearDueDate = false,
+    DateTime? dueDatePart,
+    Duration? dueTime,
+    DateTime? dueAt,
+    bool clearDueAt = false,
     int? priority,
     String? iconName,
   }) async {
@@ -216,20 +222,34 @@ class TaskProvider extends ChangeNotifier {
       updated = updated.copyWith(priority: priority);
     }
 
-    if (clearDueDate) {
-      updated = updated.copyWith(clearDueDate: true);
-    } else if (dueDate != null) {
-      updated = updated.copyWith(dueDate: dueDate);
+    DateTime? nextDueAt = before.dueAt;
+    if (clearDueAt) {
+      nextDueAt = null;
+      updated = updated.copyWith(clearDueAt: true);
+    } else if (dueAt != null || dueDatePart != null || dueTime != null) {
+      nextDueAt =
+          dueAt ??
+          _composeDueAt(
+            date: dueDatePart,
+            time: dueTime,
+            existing: before.dueAt,
+          );
+      updated = updated.copyWith(dueAt: nextDueAt);
     }
 
     _today[index] = updated;
+    _sortToday();
     notifyListeners();
+
+    final dueAtForUpdate = clearDueAt
+        ? null
+        : (nextDueAt != before.dueAt ? nextDueAt : null);
 
     try {
       await _service.updateTask(
         id,
-        dueDate: dueDate,
-        clearDueDate: clearDueDate,
+        dueAt: dueAtForUpdate,
+        clearDueAt: clearDueAt,
         priority: priority,
         iconName: iconName,
       );
@@ -361,5 +381,53 @@ class TaskProvider extends ChangeNotifier {
     _labelsByTask[taskId] = set;
     notifyListeners();
     await _labelService.toggleTaskLabel(taskId, labelName, enabled);
+  }
+
+  void _sortToday() {
+    _today.sort((a, b) {
+      if (a.isDone != b.isDone) {
+        return a.isDone ? 1 : -1;
+      }
+      final priorityComparison = b.priority.compareTo(a.priority);
+      if (priorityComparison != 0) {
+        return priorityComparison;
+      }
+      final dueA = a.dueAt;
+      final dueB = b.dueAt;
+      if (dueA != null && dueB != null) {
+        final dueComparison = dueA.compareTo(dueB);
+        if (dueComparison != 0) return dueComparison;
+      } else if (dueA == null && dueB != null) {
+        return 1;
+      } else if (dueA != null && dueB == null) {
+        return -1;
+      }
+      return a.orderHint.compareTo(b.orderHint);
+    });
+  }
+
+  DateTime _defaultDueAt(DateTime reference) {
+    final local = reference.toLocal();
+    final truncated = DateTime(local.year, local.month, local.day, local.hour);
+    return truncated.add(const Duration(hours: 1));
+  }
+
+  DateTime _composeDueAt({DateTime? date, Duration? time, DateTime? existing}) {
+    final baseDate = (date ?? existing ?? DateTime.now()).toLocal();
+    final resolvedTime =
+        time ??
+        (existing != null
+            ? Duration(
+                hours: existing.toLocal().hour,
+                minutes: existing.toLocal().minute,
+              )
+            : const Duration(hours: 23, minutes: 59));
+    return DateTime(
+      baseDate.year,
+      baseDate.month,
+      baseDate.day,
+      resolvedTime.inHours.remainder(24),
+      resolvedTime.inMinutes.remainder(60),
+    );
   }
 }

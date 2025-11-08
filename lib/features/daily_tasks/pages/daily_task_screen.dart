@@ -94,7 +94,9 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Include spanning window'),
-                    subtitle: const Text('Show tasks where day falls within start → due'),
+                    subtitle: const Text(
+                      'Show tasks where day falls within start → due',
+                    ),
                     value: includeSpanning,
                     onChanged: (v) => setState(() => includeSpanning = v),
                   ),
@@ -117,11 +119,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                         onPressed: () async {
                           Navigator.of(context).pop();
                           await context.read<TaskProvider>().refreshDaily(
-                                day: day,
-                                includeOverdue: includeOverdue,
-                                includeSpanning: includeSpanning,
-                                includeUndated: includeUndated,
-                              );
+                            day: day,
+                            includeOverdue: includeOverdue,
+                            includeSpanning: includeSpanning,
+                            includeUndated: includeUndated,
+                          );
                         },
                         child: const Text('Apply'),
                       ),
@@ -226,12 +228,12 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           );
                         }
                       },
-                      onDueDateChange: (date) async {
+                      onDueAtChange: (date) async {
                         final task = p.selectedTask;
                         if (task == null) return;
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          await p.updateTask(task.id, dueDate: date);
+                          await p.updateTask(task.id, dueDatePart: date);
                         } catch (error) {
                           messenger.showSnackBar(
                             SnackBar(
@@ -242,12 +244,28 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           );
                         }
                       },
-                      onClearDueDate: () async {
+                      onDueTimeChange: (timeOfDay) async {
                         final task = p.selectedTask;
                         if (task == null) return;
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          await p.updateTask(task.id, clearDueDate: true);
+                          await p.updateTask(task.id, dueTime: timeOfDay);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to update due time: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onClearDueAt: () async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(task.id, clearDueAt: true);
                         } catch (error) {
                           messenger.showSnackBar(
                             SnackBar(

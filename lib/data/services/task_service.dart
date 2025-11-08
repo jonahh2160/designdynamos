@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 
-//start_date = 
+//start_date =
 //dude_date = deadline(overdue after this date)
 class TaskService {
   final SupabaseClient _sb;
@@ -22,20 +22,18 @@ class TaskService {
       return const [];
     }
 
-    final dayStr = _formatDateOnly(day);
-
     final response = await _sb.rpc(
       'get_daily_tasks_rpc',
       params: {
-        'day': dayStr,
+        'day': day.toUtc().toIso8601String(),
         'include_overdue': includeOverdue,
         'include_spanning': includeSpanning,
-        'include_undated': includeUndated,
+        'include_backlog': includeUndated,
       },
     );
 
-    final List<Map<String, dynamic>> res =
-        (response as List).cast<Map<String, dynamic>>();
+    final List<Map<String, dynamic>> res = (response as List)
+        .cast<Map<String, dynamic>>();
     return res.map(TaskItem.fromMap).toList();
   }
 
@@ -59,8 +57,8 @@ class TaskService {
 
   Future<void> updateTask(
     String taskId, {
-    DateTime? dueDate,
-    bool clearDueDate = false,
+    DateTime? dueAt,
+    bool clearDueAt = false,
     int? priority,
     String? iconName,
     bool? isDone,
@@ -68,10 +66,10 @@ class TaskService {
   }) async {
     final payload = <String, dynamic>{};
 
-    if (clearDueDate) {
-      payload['due_date'] = null;
-    } else if (dueDate != null) {
-      payload['due_date'] = _formatDateOnly(dueDate);
+    if (clearDueAt) {
+      payload['due_at'] = null;
+    } else if (dueAt != null) {
+      payload['due_at'] = dueAt.toUtc().toIso8601String();
     }
 
     if (priority != null) payload['priority'] = priority;
@@ -101,11 +99,7 @@ class TaskService {
       throw StateError('Cannot delete task without an authenticated user.');
     }
 
-    await _sb
-        .from('tasks')
-        .delete()
-        .eq('id', taskId)
-        .eq('user_id', userId);
+    await _sb.from('tasks').delete().eq('id', taskId).eq('user_id', userId);
   }
 
   //Notes CRUD
@@ -127,19 +121,9 @@ class TaskService {
       return;
     }
 
-    await _sb.from('task_notes').upsert(
-      {
-        'task_id': taskId,
-        'content': trimmed,
-      },
-      onConflict: 'task_id',
-    );
+    await _sb.from('task_notes').upsert({
+      'task_id': taskId,
+      'content': trimmed,
+    }, onConflict: 'task_id');
   }
-}
-
-String _formatDateOnly(DateTime date) {
-  final y = date.year.toString();
-  final m = date.month.toString().padLeft(2, '0');
-  final d = date.day.toString().padLeft(2, '0');
-  return '$y-$m-$d';
 }
