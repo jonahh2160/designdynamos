@@ -24,9 +24,19 @@ class TaskProvider extends ChangeNotifier {
   final Map<String, String?> _notesByTask = {};
   final Map<String, Set<String>> _labelsByTask = {};
 
+  // Daily filters/state
+  DateTime _day = DateTime.now();
+  bool _includeOverdue = true;
+  bool _includeSpanning = true;
+  bool _includeUndated = false;
+
   bool get isLoading => _loading;
   bool get isCreating => _creating;
   List<TaskItem> get today => List.unmodifiable(_today);
+  DateTime get day => _day;
+  bool get includeOverdue => _includeOverdue;
+  bool get includeSpanning => _includeSpanning;
+  bool get includeUndated => _includeUndated;
   List<DbSubtask> subtasksOf(String taskId) =>
       List.unmodifiable(_subtasksByTask[taskId] ?? const []);
   (int done, int total) subtaskProgress(String taskId) {
@@ -47,22 +57,35 @@ class TaskProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<void> refreshToday() async {
+  Future<void> refreshDaily({
+    DateTime? day,
+    bool? includeOverdue,
+    bool? includeSpanning,
+    bool? includeUndated,
+  }) async {
+    if (day != null) _day = DateTime(day.year, day.month, day.day);
+    if (includeOverdue != null) _includeOverdue = includeOverdue;
+    if (includeSpanning != null) _includeSpanning = includeSpanning;
+    if (includeUndated != null) _includeUndated = includeUndated;
+
     _loading = true;
     notifyListeners();
 
     try {
-      final tasks = await _service.getTodayTasks();
+      final tasks = await _service.getDailyTasks(
+        _day,
+        includeOverdue: _includeOverdue,
+        includeSpanning: _includeSpanning,
+        includeUndated: _includeUndated,
+      );
       _today = tasks;
 
       if (_today.isEmpty) {
         _selectedTaskId = null;
       } else if (_selectedTaskId == null ||
-          //.any is a method that checks if any element in the collection satisfies the given condition
           !_today.any((t) => t.id == _selectedTaskId)) {
         _selectedTaskId = _today.first.id;
       }
-      //Load details for selected task (subtasks, labels, notes)
       final sel = _selectedTaskId;
       if (sel != null) {
         await _loadDetails(sel);
@@ -72,6 +95,8 @@ class TaskProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> refreshToday() => refreshDaily(day: DateTime.now());
 
   void selectTask(String? id) {
     if (_selectedTaskId == id) return;

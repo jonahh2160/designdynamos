@@ -1,13 +1,20 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 
+//start_date = 
+//dude_date = deadline(overdue after this date)
 class TaskService {
   final SupabaseClient _sb;
   TaskService(this._sb);
   SupabaseClient get client => _sb;
 
-  //Future is the result of an asynchronous operation that may not be immediately available
-  Future<List<TaskItem>> getTodayTasks() async {
+  //Flexible daily-task fetch with optional inclusions.
+  Future<List<TaskItem>> getDailyTasks(
+    DateTime day, {
+    bool includeOverdue = true,
+    bool includeSpanning = true,
+    bool includeUndated = false,
+  }) async {
     //ensuring we only fetch tasks for the current authenticated user
     final userId = _sb.auth.currentUser?.id;
     if (userId == null) {
@@ -15,7 +22,28 @@ class TaskService {
       return const [];
     }
 
-    final day = _formatDateOnly(DateTime.now());
+    final dayStr = _formatDateOnly(day);
+
+    //base: tasks strictly tied to the day (due OR start equals day)
+    final orParts = <String>[
+      'due_date.eq.$dayStr',
+      'start_date.eq.$dayStr',
+    ];
+
+    //including overdue, still open
+    if (includeOverdue) {
+      orParts.add('and(is_done.eq.false,due_date.lt.$dayStr)');
+    }
+
+    //including ongoing span where today is within [start_date, due_date] window
+    if (includeSpanning) {
+      orParts.add('and(start_date.lte.$dayStr,or(due_date.is.null,due_date.gte.$dayStr))');
+    }
+
+    //including undated, still open backlog tasks
+    if (includeUndated) {
+      orParts.add('and(is_done.eq.false,start_date.is.null,due_date.is.null)');
+    }
 
     final response = await _sb
         .from('tasks')
@@ -23,13 +51,17 @@ class TaskService {
           'id, title, icon_name, notes, start_date, due_date, points, priority, order_hint, is_done, completed_at',
         )
         .eq('user_id', userId)
-        .or('due_date.eq.$day,start_date.eq.$day')
+        .or(orParts.join(','))
         .order('is_done', ascending: true)
+        .order('priority', ascending: false)
         .order('order_hint', ascending: true);
 
     final List<Map<String, dynamic>> res = (response as List).cast<Map<String, dynamic>>();
     return res.map(TaskItem.fromMap).toList();
   }
+
+  //Convenience wrapper for "today"
+  Future<List<TaskItem>> getTodayTasks() => getDailyTasks(DateTime.now());
 
   Future<TaskItem> createTask(TaskItem task) async {
     final userId = _sb.auth.currentUser?.id;

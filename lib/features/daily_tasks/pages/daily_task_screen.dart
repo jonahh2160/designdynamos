@@ -27,6 +27,115 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   bool _isAdding = false;
   StreamSubscription<AuthState>? _authSub;
 
+  Future<void> _openFilterSheet() async {
+    final p = context.read<TaskProvider>();
+    DateTime day = p.day;
+    bool includeOverdue = p.includeOverdue;
+    bool includeSpanning = p.includeSpanning;
+    bool includeUndated = p.includeUndated;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Daily Filters',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            day = DateTime.now();
+                            includeOverdue = true;
+                            includeSpanning = true;
+                            includeUndated = false;
+                          });
+                        },
+                        child: const Text('Reset'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Day'),
+                    subtitle: Text(DateFormat('EEEE, MMM d, yyyy').format(day)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: day,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() => day = picked);
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Include overdue'),
+                    value: includeOverdue,
+                    onChanged: (v) => setState(() => includeOverdue = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Include spanning window'),
+                    subtitle: const Text('Show tasks where day falls within start → due'),
+                    value: includeSpanning,
+                    onChanged: (v) => setState(() => includeSpanning = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Include undated backlog'),
+                    value: includeUndated,
+                    onChanged: (v) => setState(() => includeUndated = v),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await context.read<TaskProvider>().refreshDaily(
+                                day: day,
+                                includeOverdue: includeOverdue,
+                                includeSpanning: includeSpanning,
+                                includeUndated: includeUndated,
+                              );
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -232,7 +341,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            DateFormat('MMMM d').format(DateTime.now()),
+                            DateFormat('MMMM d').format(p.day),
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.w600,
@@ -245,9 +354,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           label: 'Suggestions',
                         ),
                         const SizedBox(width: 12),
-                        const ActionChipButton(
+                        ActionChipButton(
                           icon: Icons.filter_list,
                           label: 'Filter',
+                          onTap: _openFilterSheet,
                         ),
                       ],
                     ),
