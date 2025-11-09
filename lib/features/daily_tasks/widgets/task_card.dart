@@ -81,6 +81,7 @@ class TaskCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                if (onToggle != null)
                 GestureDetector(
                   onTap: onToggle,
                   behavior: HitTestBehavior.translucent,

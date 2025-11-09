@@ -19,6 +19,7 @@ class TaskProvider extends ChangeNotifier {
   bool _loading = false;
   bool _creating = false;
   List<TaskItem> _today = [];
+  List<TaskItem> _allTasks = [];
   String? _selectedTaskId;
   final Map<String, List<DbSubtask>> _subtasksByTask = {};
   final Map<String, String?> _notesByTask = {};
@@ -33,6 +34,7 @@ class TaskProvider extends ChangeNotifier {
   bool get isLoading => _loading;
   bool get isCreating => _creating;
   List<TaskItem> get today => List.unmodifiable(_today);
+  List<TaskItem> get allTasks => List.unmodifiable(_allTasks); //get all tasks
   DateTime get day => _day;
   bool get includeOverdue => _includeOverdue;
   bool get includeSpanning => _includeSpanning;
@@ -96,6 +98,19 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshAllTasks() async {
+    _loading = true;
+    notifyListeners();
+
+    try {
+      final tasks = await _service.getAllTasks();
+      _allTasks = tasks;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  } 
+
   Future<void> refreshToday() => refreshDaily(day: DateTime.now());
 
   void selectTask(String? id) {
@@ -139,6 +154,14 @@ class TaskProvider extends ChangeNotifier {
       _sortToday();
       _selectedTaskId = created.id;
 
+      // Update _allTasks
+      final allIndex = _allTasks.indexWhere((t) => t.id == tempId);
+      if (allIndex >= 0) {
+        _allTasks[allIndex] = created;
+        } else {
+        _allTasks.add(created);
+      }
+
       //Optional: notes
       if (draft.notes != null && draft.notes!.trim().isNotEmpty) {
         await _service.upsertNote(created.id, draft.notes);
@@ -176,6 +199,7 @@ class TaskProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
 
   Future<void> toggleDone(String id, bool done) async {
     final index = _today.indexWhere((task) => task.id == id);
@@ -238,6 +262,8 @@ class TaskProvider extends ChangeNotifier {
     }
 
     _today[index] = updated;
+    final allIndex = _allTasks.indexWhere((t) => t.id == id);
+    if (allIndex != -1) _allTasks[allIndex] = updated;
     _sortToday();
     notifyListeners();
 
@@ -264,6 +290,7 @@ class TaskProvider extends ChangeNotifier {
     final idx = _today.indexWhere((t) => t.id == id);
     if (idx < 0) return;
     final removed = _today.removeAt(idx);
+    _allTasks.removeWhere((t) => t.id == id);
     notifyListeners();
     try {
       await _service.deleteTask(id);
@@ -382,8 +409,24 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
     await _labelService.toggleTaskLabel(taskId, labelName, enabled);
   }
+  
+  //For task ordering
+  Future<void> updateTaskOrder(String taskId, int newOrderHint) async {
+    try {
+      // Update local list
+      final index = _today.indexWhere((t) => t.id == taskId);
+      if (index != -1) {
+        _today[index] = _today[index].copyWith(orderHint: newOrderHint);
+        notifyListeners();
+      }
+    } catch (e) {
+      notifyListeners();
+      rethrow;
+    }
+  }
 
   void _sortToday() {
+    print('🧩 sortToday() called');
     _today.sort((a, b) {
       if (a.isDone != b.isDone) {
         return a.isDone ? 1 : -1;

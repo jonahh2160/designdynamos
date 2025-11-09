@@ -195,8 +195,13 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final open = p.today.where((t) => !t.isDone).toList();
-    final finished = p.today.where((t) => t.isDone).toList();
+    final open = p.today.where((t) => !t.isDone)
+      .toList()
+      ..sort((a,b) => a.orderHint.compareTo(b.orderHint)); //Order sorting [MJ]
+
+    final finished = p.today.where((t) => t.isDone)
+      .toList()
+      ..sort((a, b) => a.orderHint.compareTo(b.orderHint)); //Order sorting [MJ]
     final selectedTaskId = p.selectedTask?.id;
 
     return Scaffold(
@@ -384,19 +389,45 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            for (final task in open)
-                              TaskCard(
-                                task: task,
-                                isSelected: task.id == selectedTaskId,
-                                onTap: () => p.selectTask(task.id),
-                                onToggle: () => context
-                                    .read<TaskProvider>()
-                                    .toggleDone(task.id, !task.isDone),
-                                subtaskDone: p.subtaskProgress(task.id).$1,
-                                subtaskTotal: p.subtaskProgress(task.id).$2,
-                                labels: p.labelsOf(task.id),
-                              ),
+                            //Change to a reorderable list
+                            ReorderableListView(
+                              physics: const NeverScrollableScrollPhysics(), // disable inner scroll
+                              shrinkWrap: true, // shrink to fit children
+                              onReorder: (oldIndex, newIndex) async {
+                                if (newIndex > oldIndex) newIndex--;
+
+                                final moved = open.removeAt(oldIndex);
+                                open.insert(newIndex, moved);
+
+                                for (int i = 0; i < open.length; i++) {
+                                  open[i] = open[i].copyWith(orderHint: i);
+                                } 
+
+                                for (final t in open) {
+                                  await context.read<TaskProvider>().updateTaskOrder(t.id, t.orderHint);
+                                }
+                              },
+                              children: [
+                                for (final task in open)
+                                  TaskCard(
+                                    key: ValueKey(task.id),
+                                    task: task,
+                                    isSelected: task.id == selectedTaskId,
+                                    onTap: () => p.selectTask(task.id),
+                                    onToggle: () => context
+                                      .read<TaskProvider>()
+                                      .toggleDone(task.id, !task.isDone),
+                                    subtaskDone: p.subtaskProgress(task.id).$1,
+                                    subtaskTotal: p.subtaskProgress(task.id).$2,
+                                    labels: p.labelsOf(task.id),
+                                  ),
+                              ],
+                            ),
+
+
                             const SizedBox(height: 16),
+
+
                             FinishedSectionHeader(
                               title: 'Finished - ${finished.length}',
                             ),
