@@ -16,6 +16,9 @@ class TaskDetailPanel extends StatelessWidget {
     super.key,
     required this.task,
     required this.onToggleComplete,
+    required this.onTargetAtChange,
+    required this.onTargetTimeChange,
+    required this.onClearTargetAt,
     required this.onDueAtChange,
     required this.onDueTimeChange,
     required this.onClearDueAt,
@@ -35,6 +38,9 @@ class TaskDetailPanel extends StatelessWidget {
 
   final TaskItem? task;
   final Future<void> Function(bool done) onToggleComplete;
+  final Future<void> Function(DateTime date) onTargetAtChange;
+  final Future<void> Function(Duration timeOfDay) onTargetTimeChange;
+  final Future<void> Function() onClearTargetAt;
   final Future<void> Function(DateTime date) onDueAtChange;
   final Future<void> Function(Duration timeOfDay) onDueTimeChange;
   final Future<void> Function() onClearDueAt;
@@ -70,6 +76,12 @@ class TaskDetailPanel extends StatelessWidget {
     }
 
     final iconData = TaskIconRegistry.iconFor(task!.iconName);
+    final targetDateLabel = task!.targetAt != null
+        ? _formatLongDate(task!.targetAt!)
+        : 'Add target date';
+    final targetTimeLabel = task!.targetAt != null
+        ? DateFormat.jm().format(task!.targetAt!.toLocal())
+        : 'Add target time';
     final dueDateLabel = task!.dueAt != null
         ? _formatLongDate(task!.dueAt!)
         : 'Add due date';
@@ -174,6 +186,55 @@ class TaskDetailPanel extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
+                _DetailTile(
+                  icon: Icons.flag_outlined,
+                  title: 'Target date',
+                  value: targetDateLabel,
+                  trailing: task!.targetAt != null
+                      ? IconButton(
+                          tooltip: 'Clear target date',
+                          onPressed: onClearTargetAt,
+                          icon: const Icon(Icons.close),
+                        )
+                      : null,
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final initial = task!.targetAt ?? task!.dueAt ?? now;
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: initial,
+                      firstDate: DateTime(now.year - 1),
+                      lastDate: DateTime(now.year + 5),
+                      helpText: 'Select target date',
+                    );
+                    if (picked != null) {
+                      await onTargetAtChange(
+                        DateTime(picked.year, picked.month, picked.day),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _DetailTile(
+                  icon: Icons.access_alarm_outlined,
+                  title: 'Target time',
+                  value: targetTimeLabel,
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final initial = task!.targetAt ?? task!.dueAt ?? now;
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(initial.toLocal()),
+                      helpText: 'Select target time',
+                    );
+                    if (picked != null) {
+                      await onTargetTimeChange(
+                        Duration(hours: picked.hour, minutes: picked.minute),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
                 _DetailTile(
                   icon: Icons.calendar_today_outlined,
                   title: 'Due date',

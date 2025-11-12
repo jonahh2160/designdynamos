@@ -6,6 +6,7 @@ class TaskDraft {
     required this.iconName,
     this.startAt,
     this.dueAt,
+    this.targetAt,
     this.priority = 5,
     this.notes,
     this.points = 10,
@@ -17,6 +18,7 @@ class TaskDraft {
   final String iconName;
   final DateTime? startAt;
   final DateTime? dueAt;
+  final DateTime? targetAt;
   final int priority;
   final String? notes;
   final int points;
@@ -35,14 +37,28 @@ class TaskDraft {
     return Duration(hours: value.hour, minutes: value.minute);
   }
 
+  DateTime? get targetDateOnly {
+    final value = targetAt;
+    if (value == null) return null;
+    return DateTime(value.year, value.month, value.day);
+  }
+
+  Duration? get targetTimeOfDay {
+    final value = targetAt;
+    if (value == null) return null;
+    return Duration(hours: value.hour, minutes: value.minute);
+  }
+
   TaskItem toTask({
     required String id,
     required int orderHint,
     DateTime? fallbackStartAt,
     DateTime? fallbackDueAt,
+    DateTime? fallbackTargetAt,
   }) {
     final resolvedStart = startAt ?? fallbackStartAt;
     final resolvedDue = dueAt ?? fallbackDueAt ?? resolvedStart;
+    final resolvedTarget = targetAt ?? fallbackTargetAt;
 
     return TaskItem(
       id: id,
@@ -53,6 +69,7 @@ class TaskDraft {
       notes: notes,
       startDate: resolvedStart,
       dueAt: resolvedDue,
+      targetAt: resolvedTarget,
       priority: priority,
       orderHint: orderHint,
     );

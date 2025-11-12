@@ -18,6 +18,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   DateTime? _dueAt = _defaultDueAt(DateTime.now());
+  DateTime? _targetAt;
   int _priority = 5;
   String _selectedIcon = TaskIconRegistry.defaultOption.name;
   String? _errorText;
@@ -110,6 +111,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         title: title,
         iconName: _selectedIcon,
         dueAt: _dueAt ?? _defaultDueAt(DateTime.now()),
+        targetAt: _targetAt,
         priority: _priority,
         notes: _notesController.text.trim().isEmpty
             ? null
@@ -173,6 +175,87 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   IconButton(
                     tooltip: 'Clear due date',
                     onPressed: _clearDueAt,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final initial = (_targetAt ?? _dueAt ?? now).toLocal();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initial,
+                        firstDate: DateTime(now.year - 1),
+                        lastDate: DateTime(now.year + 5),
+                        helpText: 'Select target date',
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          final current = _targetAt ?? _dueAt ?? now;
+                          _targetAt = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            current.hour,
+                            current.minute,
+                          );
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.flag_outlined),
+                    label: Text(
+                      _targetAt != null
+                          ? _formattedDate(_targetAt!)
+                          : 'Add target date',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final base = (_targetAt ?? _dueAt ?? now).toLocal();
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(
+                          hour: base.hour,
+                          minute: base.minute,
+                        ),
+                        helpText: 'Select target time',
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          final currentDate = _targetAt ?? _dueAt ?? now;
+                          _targetAt = DateTime(
+                            currentDate.year,
+                            currentDate.month,
+                            currentDate.day,
+                            picked.hour,
+                            picked.minute,
+                          );
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.access_alarm_outlined),
+                    label: Text(
+                      _targetAt != null
+                          ? _formattedTime(_targetAt!)
+                          : 'Add target time',
+                    ),
+                  ),
+                ),
+                if (_targetAt != null) ...[
+                  const SizedBox(width: 12),
+                  IconButton(
+                    tooltip: 'Clear target date',
+                    onPressed: () => setState(() => _targetAt = null),
                     icon: const Icon(Icons.close),
                   ),
                 ],

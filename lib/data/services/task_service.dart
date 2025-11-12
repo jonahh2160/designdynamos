@@ -59,6 +59,8 @@ class TaskService {
     String taskId, {
     DateTime? dueAt,
     bool clearDueAt = false,
+    DateTime? targetAt,
+    bool clearTargetAt = false,
     int? priority,
     String? iconName,
     bool? isDone,
@@ -70,6 +72,12 @@ class TaskService {
       payload['due_at'] = null;
     } else if (dueAt != null) {
       payload['due_at'] = dueAt.toUtc().toIso8601String();
+    }
+
+    if (clearTargetAt) {
+      payload['target_at'] = null;
+    } else if (targetAt != null) {
+      payload['target_at'] = targetAt.toUtc().toIso8601String();
     }
 
     if (priority != null) payload['priority'] = priority;

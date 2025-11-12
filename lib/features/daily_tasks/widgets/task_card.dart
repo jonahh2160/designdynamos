@@ -174,11 +174,19 @@ class _MetadataRow extends StatelessWidget {
         ),
       );
     }
+    if (task.targetAt != null) {
+      chips.add(
+        MetaChip(
+          icon: Icons.flag_outlined,
+          label: _formatTargetLabel(task.targetAt!),
+        ),
+      );
+    }
     if (task.dueAt != null) {
       chips.add(
         MetaChip(
           icon: Icons.calendar_today_outlined,
-          label: _formatDueDate(task.dueAt!),
+          label: _formatDueLabel(task.dueAt!),
         ),
       );
     }
@@ -197,16 +205,22 @@ class _MetadataRow extends StatelessWidget {
   }
 }
 
-String _formatDueDate(DateTime dateTime) {
+String _formatTargetLabel(DateTime dateTime) =>
+    'Target ${_formatRelativeDate(dateTime)}';
+
+String _formatDueLabel(DateTime dateTime) =>
+    'Due ${_formatRelativeDate(dateTime)}';
+
+String _formatRelativeDate(DateTime dateTime) {
   final local = dateTime.toLocal();
   final today = DateUtils.dateOnly(DateTime.now());
   final target = DateUtils.dateOnly(local);
   final diff = target.difference(today).inDays;
   final timeLabel = DateFormat.jm().format(local);
 
-  if (diff == 0) return 'Due Today • $timeLabel';
-  if (diff == 1) return 'Due Tomorrow • $timeLabel';
-  if (diff == -1) return 'Due Yesterday • $timeLabel';
+  if (diff == 0) return 'Today • $timeLabel';
+  if (diff == 1) return 'Tomorrow • $timeLabel';
+  if (diff == -1) return 'Yesterday • $timeLabel';
 
   const months = [
     'Jan',

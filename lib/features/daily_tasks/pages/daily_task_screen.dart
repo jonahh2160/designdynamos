@@ -228,6 +228,54 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           );
                         }
                       },
+                      onTargetAtChange: (date) async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(task.id, targetDatePart: date);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to update target date: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onTargetTimeChange: (timeOfDay) async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(task.id, targetTime: timeOfDay);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to update target time: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onClearTargetAt: () async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(task.id, clearTargetAt: true);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to clear target date: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
                       onDueAtChange: (date) async {
                         final task = p.selectedTask;
                         if (task == null) return;

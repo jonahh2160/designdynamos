@@ -8,6 +8,7 @@ class TaskItem {
     this.notes,
     this.startDate,
     this.dueAt,
+    this.targetAt,
     this.priority = 5,
     this.orderHint = 1000,
     this.completedAt,
@@ -21,6 +22,7 @@ class TaskItem {
   final String? notes;
   final DateTime? startDate;
   final DateTime? dueAt;
+  final DateTime? targetAt;
   final int priority;
   final int orderHint;
   final DateTime? completedAt;
@@ -70,6 +72,7 @@ class TaskItem {
       notes: map['notes'] as String?,
       startDate: _parseDateTime(map['start_at'] ?? map['start_date']),
       dueAt: _parseDateTime(map['due_at'] ?? map['due_date']),
+      targetAt: _parseDateTime(map['target_at']),
       priority: _parseInt(map['priority'], 5),
       orderHint: (map['order_hint'] ?? 1000) as int,
       completedAt: _parseDateTime(map['completed_at']),
@@ -83,6 +86,7 @@ class TaskItem {
     'notes': notes,
     'start_at': _utcString(startDate),
     'due_at': _utcString(dueAt),
+    'target_at': _utcString(targetAt),
     'points': points,
     'priority': priority,
     'order_hint': orderHint,
@@ -93,6 +97,7 @@ class TaskItem {
 
   Map<String, dynamic> toUpdateRow({
     bool clearDueAt = false,
+    bool clearTargetAt = false,
     DateTime? overrideCompletedAt,
   }) {
     final data = <String, dynamic>{
@@ -101,6 +106,7 @@ class TaskItem {
       'notes': notes,
       'start_at': _utcString(startDate),
       'due_at': clearDueAt ? null : _utcString(dueAt),
+      'target_at': clearTargetAt ? null : _utcString(targetAt),
       'points': points,
       'priority': priority,
       'order_hint': orderHint,
@@ -123,7 +129,9 @@ class TaskItem {
     String? notes,
     DateTime? startDate,
     DateTime? dueAt,
+    DateTime? targetAt,
     bool clearDueAt = false,
+    bool clearTargetAt = false,
     int? priority,
     int? orderHint,
     DateTime? completedAt,
@@ -137,6 +145,7 @@ class TaskItem {
       notes: notes ?? this.notes,
       startDate: startDate ?? this.startDate,
       dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
+      targetAt: clearTargetAt ? null : (targetAt ?? this.targetAt),
       priority: priority ?? this.priority,
       orderHint: orderHint ?? this.orderHint,
       completedAt: completedAt ?? this.completedAt,

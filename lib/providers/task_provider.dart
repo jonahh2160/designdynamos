@@ -118,11 +118,13 @@ class TaskProvider extends ChangeNotifier {
     final now = DateTime.now();
     final fallbackStart = draft.startAt ?? now;
     final fallbackDue = draft.dueAt ?? _defaultDueAt(fallbackStart);
+    final fallbackTarget = draft.targetAt ?? fallbackDue;
     final tempTask = draft.toTask(
       id: tempId,
       orderHint: nextOrderHint,
       fallbackStartAt: fallbackStart,
       fallbackDueAt: fallbackDue,
+      fallbackTargetAt: fallbackTarget,
     );
 
     _creating = true;
@@ -205,6 +207,10 @@ class TaskProvider extends ChangeNotifier {
     Duration? dueTime,
     DateTime? dueAt,
     bool clearDueAt = false,
+    DateTime? targetDatePart,
+    Duration? targetTime,
+    DateTime? targetAt,
+    bool clearTargetAt = false,
     int? priority,
     String? iconName,
   }) async {
@@ -237,6 +243,23 @@ class TaskProvider extends ChangeNotifier {
       updated = updated.copyWith(dueAt: nextDueAt);
     }
 
+    DateTime? nextTargetAt = before.targetAt;
+    if (clearTargetAt) {
+      nextTargetAt = null;
+      updated = updated.copyWith(clearTargetAt: true);
+    } else if (targetAt != null ||
+        targetDatePart != null ||
+        targetTime != null) {
+      nextTargetAt =
+          targetAt ??
+          _composeDueAt(
+            date: targetDatePart,
+            time: targetTime,
+            existing: before.targetAt,
+          );
+      updated = updated.copyWith(targetAt: nextTargetAt);
+    }
+
     _today[index] = updated;
     _sortToday();
     notifyListeners();
@@ -244,12 +267,17 @@ class TaskProvider extends ChangeNotifier {
     final dueAtForUpdate = clearDueAt
         ? null
         : (nextDueAt != before.dueAt ? nextDueAt : null);
+    final targetAtForUpdate = clearTargetAt
+        ? null
+        : (nextTargetAt != before.targetAt ? nextTargetAt : null);
 
     try {
       await _service.updateTask(
         id,
         dueAt: dueAtForUpdate,
         clearDueAt: clearDueAt,
+        targetAt: targetAtForUpdate,
+        clearTargetAt: clearTargetAt,
         priority: priority,
         iconName: iconName,
       );
@@ -391,6 +419,16 @@ class TaskProvider extends ChangeNotifier {
       final priorityComparison = b.priority.compareTo(a.priority);
       if (priorityComparison != 0) {
         return priorityComparison;
+      }
+      final plannedA = a.targetAt ?? a.dueAt;
+      final plannedB = b.targetAt ?? b.dueAt;
+      if (plannedA != null && plannedB != null) {
+        final plannedComparison = plannedA.compareTo(plannedB);
+        if (plannedComparison != 0) return plannedComparison;
+      } else if (plannedA == null && plannedB != null) {
+        return 1;
+      } else if (plannedA != null && plannedB == null) {
+        return -1;
       }
       final dueA = a.dueAt;
       final dueB = b.dueAt;
