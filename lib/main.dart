@@ -11,10 +11,10 @@ import 'core/models/nav_item_data.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/data/services/supabase_service.dart';
 import 'providers/task_provider.dart';
+import 'providers/goal_provider.dart';
 import 'data/services/task_service.dart';
-
-
-
+import 'data/services/goal_service.dart';
+import 'data/services/goal_step_task_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +26,14 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => TaskProvider(TaskService(SupabaseService.client))
-            ..refreshToday(),
+          create: (_) =>
+              TaskProvider(TaskService(SupabaseService.client))..refreshToday(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => GoalProvider(
+            GoalService(SupabaseService.client),
+            GoalStepTaskService(SupabaseService.client),
+          ),
         ),
       ],
       child: const MyApp(),
@@ -48,7 +54,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class SidebarButton extends StatelessWidget {
   const SidebarButton({
@@ -118,5 +123,3 @@ class SidebarButton extends StatelessWidget {
     );
   }
 }
-
-

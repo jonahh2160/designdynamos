@@ -6,9 +6,6 @@ import 'package:designdynamos/ui/screen/dashboard/dashboard_screen.dart';
 import 'package:designdynamos/ui/widgets/custom_calendar.dart';
 import 'package:designdynamos/features/outlook/pages/outlook_screen.dart';
 
-
-
-
 class AppPages {
   AppPages._();
 
@@ -16,62 +13,44 @@ class AppPages {
     GetPage(
       name: "/",
       page: () => ResponsiveLayout(content: DailyTaskScreen()),
-      bindings: [
-        DashboardBinding(),
-      ],
+      bindings: [DashboardBinding()],
     ),
     GetPage(
       name: "/calendar",
-      page: () => const ResponsiveLayout(
-      content: CustomCalendar(),),
+      page: () => const ResponsiveLayout(content: CustomCalendar()),
     ),
 
     GetPage(
       name: "/outlook",
-      page: () => const ResponsiveLayout(
-        content: OutlookScreen(),),
-      ),
-    
+      page: () => const ResponsiveLayout(content: OutlookScreen()),
+    ),
+
     GetPage(
       name: "/tasks",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("tasks"),
-        ),
+        content: Align(alignment: Alignment.center, child: Text("tasks")),
       ),
     ),
     GetPage(
       name: "/vente",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("vente"),
-        ),
+        content: Align(alignment: Alignment.center, child: Text("vente")),
       ),
     ),
     GetPage(
       name: "/goals",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("goals"),
-        ),
+        content: Align(alignment: Alignment.center, child: Text("goals")),
       ),
     ),
     GetPage(
       name: "/achievements",
-      page: () => const ResponsiveLayout(
-        content: OutlookScreen(),),
-      
+      page: () => const ResponsiveLayout(content: OutlookScreen()),
     ),
     GetPage(
       name: "/games",
       page: () => const ResponsiveLayout(
-        content: Align(
-          alignment: Alignment.center,
-          child: Text("games"),
-        ),
+        content: Align(alignment: Alignment.center, child: Text("games")),
       ),
     ),
 

@@ -29,6 +29,8 @@ class TaskProvider extends ChangeNotifier {
   bool _includeOverdue = true;
   bool _includeSpanning = true;
   bool _includeUndated = false;
+  List<TaskItem> get unassignedTasks =>
+      List.unmodifiable(_today.where((task) => task.goalStepId == null));
 
   bool get isLoading => _loading;
   bool get isCreating => _creating;
@@ -211,6 +213,8 @@ class TaskProvider extends ChangeNotifier {
     Duration? targetTime,
     DateTime? targetAt,
     bool clearTargetAt = false,
+    String? goalStepId,
+    bool clearGoalStep = false,
     int? priority,
     String? iconName,
   }) async {
@@ -260,6 +264,12 @@ class TaskProvider extends ChangeNotifier {
       updated = updated.copyWith(targetAt: nextTargetAt);
     }
 
+    if (clearGoalStep) {
+      updated = updated.copyWith(clearGoalStep: true);
+    } else if (goalStepId != null) {
+      updated = updated.copyWith(goalStepId: goalStepId);
+    }
+
     _today[index] = updated;
     _sortToday();
     notifyListeners();
@@ -278,6 +288,8 @@ class TaskProvider extends ChangeNotifier {
         clearDueAt: clearDueAt,
         targetAt: targetAtForUpdate,
         clearTargetAt: clearTargetAt,
+        goalStepId: goalStepId,
+        clearGoalStep: clearGoalStep,
         priority: priority,
         iconName: iconName,
       );
@@ -409,6 +421,25 @@ class TaskProvider extends ChangeNotifier {
     _labelsByTask[taskId] = set;
     notifyListeners();
     await _labelService.toggleTaskLabel(taskId, labelName, enabled);
+  }
+
+  Future<void> assignTaskToStep(String taskId, String? goalStepId) async {
+    final index = _today.indexWhere((task) => task.id == taskId);
+    if (index < 0) return;
+    final before = _today[index];
+    final updated = before.copyWith(
+      goalStepId: goalStepId,
+      clearGoalStep: goalStepId == null,
+    );
+    _today[index] = updated;
+    notifyListeners();
+    try {
+      await _service.setGoalStep(taskId, goalStepId: goalStepId);
+    } catch (error) {
+      _today[index] = before;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   void _sortToday() {

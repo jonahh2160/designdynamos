@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
 import 'package:intl/intl.dart';
 
-
 import 'package:designdynamos/ui/widgets/large_box.dart';
 
 class OutlookScreen extends StatelessWidget {
@@ -13,8 +12,10 @@ class OutlookScreen extends StatelessWidget {
 
     //generate a list of 14 days starting from today
     final DateTime today = DateTime.now();
-    final List<DateTime> days =
-        List.generate(14, (index) => today.add(Duration(days: index)));
+    final List<DateTime> days = List.generate(
+      14,
+      (index) => today.add(Duration(days: index)),
+    );
 
     return Scaffold(
       body: Padding(
@@ -28,9 +29,9 @@ class OutlookScreen extends StatelessWidget {
             Text(
               "Outlook",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
+                fontWeight: FontWeight.bold,
+                fontSize: 30,
+              ),
             ),
 
             const SizedBox(height: 40),
@@ -50,19 +51,17 @@ class OutlookScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
                     itemBuilder: (context, index) {
                       final day = days[index];
-                      final formattedDate =
-                          DateFormat('EEEE, MMM d').format(day); //e.g. "Monday, Oct 21"
+                      final formattedDate = DateFormat(
+                        'EEEE, MMM d',
+                      ).format(day); //e.g. "Monday, Oct 21"
 
                       //Use your reusable widget here
                       return LargeBox(
                         label: formattedDate,
                         child: const Text(
                           "Events go here",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
                         ),
-                      )
                       );
                     },
                   ),

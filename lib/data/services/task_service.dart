@@ -1,11 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/core/models/task_item.dart';
+import 'package:designdynamos/data/services/goal_step_task_service.dart';
 
 //start_date =
 //dude_date = deadline(overdue after this date)
 class TaskService {
   final SupabaseClient _sb;
-  TaskService(this._sb);
+  TaskService(this._sb, {GoalStepTaskService? goalStepTasks})
+    : _goalStepTasks = goalStepTasks ?? GoalStepTaskService(_sb);
+  final GoalStepTaskService _goalStepTasks;
   SupabaseClient get client => _sb;
 
   //Flexible daily-task fetch with optional inclusions.
@@ -34,7 +37,8 @@ class TaskService {
 
     final List<Map<String, dynamic>> res = (response as List)
         .cast<Map<String, dynamic>>();
-    return res.map(TaskItem.fromMap).toList();
+    final tasks = res.map(TaskItem.fromMap).toList();
+    return tasks;
   }
 
   //Convenience wrapper for "today"
@@ -52,7 +56,15 @@ class TaskService {
         .select()
         .single();
 
-    return TaskItem.fromMap(inserted);
+    var created = TaskItem.fromMap(inserted);
+    if (task.goalStepId != null) {
+      await _goalStepTasks.assign(task.goalStepId!, created.id);
+      created = created.copyWith(
+        goalStepId: task.goalStepId,
+        goalId: task.goalId,
+      );
+    }
+    return created;
   }
 
   Future<void> updateTask(
@@ -61,6 +73,8 @@ class TaskService {
     bool clearDueAt = false,
     DateTime? targetAt,
     bool clearTargetAt = false,
+    String? goalStepId,
+    bool clearGoalStep = false,
     int? priority,
     String? iconName,
     bool? isDone,
@@ -89,9 +103,15 @@ class TaskService {
           : null;
     }
 
-    if (payload.isEmpty) return;
+    if (payload.isNotEmpty) {
+      await _sb.from('tasks').update(payload).eq('id', taskId);
+    }
 
-    await _sb.from('tasks').update(payload).eq('id', taskId);
+    if (clearGoalStep) {
+      await _goalStepTasks.removeByTask(taskId);
+    } else if (goalStepId != null) {
+      await _goalStepTasks.assign(goalStepId, taskId);
+    }
   }
 
   Future<void> toggleDone(String taskId, bool done) =>
@@ -108,6 +128,7 @@ class TaskService {
     }
 
     await _sb.from('tasks').delete().eq('id', taskId).eq('user_id', userId);
+    await _goalStepTasks.removeByTask(taskId);
   }
 
   //Notes CRUD
@@ -133,5 +154,13 @@ class TaskService {
       'task_id': taskId,
       'content': trimmed,
     }, onConflict: 'task_id');
+  }
+
+  Future<void> setGoalStep(String taskId, {String? goalStepId}) async {
+    if (goalStepId == null) {
+      await _goalStepTasks.removeByTask(taskId);
+    } else {
+      await _goalStepTasks.assign(goalStepId, taskId);
+    }
   }
 }

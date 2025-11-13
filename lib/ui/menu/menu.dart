@@ -32,7 +32,9 @@ class Menu extends StatelessWidget {
                 MainMenuData menu = listMainMenu[index];
                 return ListTile(
                   selected: route!.settings.name == menu.route,
-                  selectedTileColor: AppColors.indigoAccent.withValues(alpha: 0.3),
+                  selectedTileColor: AppColors.indigoAccent.withValues(
+                    alpha: 0.3,
+                  ),
                   onTap: () => Get.toNamed(menu.route),
                   title: Text(menu.name),
                   leading: Icon(menu.icon),
@@ -48,30 +50,20 @@ class Menu extends StatelessWidget {
                 Text.rich(
                   TextSpan(
                     text: 'Version: ',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.grey800,
-                    ),
+                    style: TextStyle(fontSize: 10, color: AppColors.grey800),
                     children: <InlineSpan>[
                       TextSpan(
                         text: AppBaseData.version,
-                        style: TextStyle(
-                          color: AppColors.grey400,
-                        ),
+                        style: TextStyle(color: AppColors.grey400),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(
-                  height: 3,
-                ),
+                const SizedBox(height: 3),
                 Text.rich(
                   TextSpan(
                     text: 'Author: ',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.grey800,
-                    ),
+                    style: TextStyle(fontSize: 10, color: AppColors.grey800),
                     children: <InlineSpan>[
                       TextSpan(
                         text: AppBaseData.author,
@@ -83,9 +75,7 @@ class Menu extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(
-                  height: 15,
-                ),
+                const SizedBox(height: 15),
               ],
             ),
           ),

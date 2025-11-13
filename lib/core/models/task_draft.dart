@@ -7,6 +7,8 @@ class TaskDraft {
     this.startAt,
     this.dueAt,
     this.targetAt,
+    this.goalStepId,
+    this.goalId,
     this.priority = 5,
     this.notes,
     this.points = 10,
@@ -19,6 +21,8 @@ class TaskDraft {
   final DateTime? startAt;
   final DateTime? dueAt;
   final DateTime? targetAt;
+  final String? goalStepId;
+  final String? goalId;
   final int priority;
   final String? notes;
   final int points;
@@ -70,6 +74,8 @@ class TaskDraft {
       startDate: resolvedStart,
       dueAt: resolvedDue,
       targetAt: resolvedTarget,
+      goalStepId: goalStepId,
+      goalId: goalId,
       priority: priority,
       orderHint: orderHint,
     );

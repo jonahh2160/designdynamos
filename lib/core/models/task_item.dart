@@ -12,6 +12,8 @@ class TaskItem {
     this.priority = 5,
     this.orderHint = 1000,
     this.completedAt,
+    this.goalStepId,
+    this.goalId,
   });
 
   final String id;
@@ -26,6 +28,19 @@ class TaskItem {
   final int priority;
   final int orderHint;
   final DateTime? completedAt;
+  final String? goalStepId;
+  final String? goalId;
+  static (String?, String?) _extractGoalLink(dynamic source) {
+    if (source is Map<String, dynamic>) {
+      final goalStepId =
+          source['goal_step_id'] as String? ?? source['id'] as String?;
+      final nestedGoal = source['goal_steps'] as Map<String, dynamic>?;
+      final goalId =
+          source['goal_id'] as String? ?? nestedGoal?['goal_id'] as String?;
+      return (goalStepId, goalId);
+    }
+    return (null, null);
+  }
 
   static DateTime? _parseDateTime(dynamic value) {
     if (value == null) return null;
@@ -63,6 +78,20 @@ class TaskItem {
   //factory construtor is a special type of constructor that can return an instance of the class(existing, chached, new, or even subclass)
   //dynamic type is a special type that allows a variable to hold values of any type, and type can change durring runtime
   factory TaskItem.fromMap(Map<String, dynamic> map) {
+    String? resolvedGoalStepId;
+    String? resolvedGoalId;
+    final dynamic link = map['goal_step_tasks'];
+    if (link is List && link.isNotEmpty) {
+      (resolvedGoalStepId, resolvedGoalId) = _extractGoalLink(
+        link.first as Map<String, dynamic>,
+      );
+    } else if (link is Map<String, dynamic>) {
+      (resolvedGoalStepId, resolvedGoalId) = _extractGoalLink(link);
+    } else {
+      resolvedGoalStepId = map['goal_step_id'] as String?;
+      resolvedGoalId = map['goal_id'] as String?;
+    }
+
     return TaskItem(
       id: map['id'] as String,
       title: map['title'] as String,
@@ -76,6 +105,8 @@ class TaskItem {
       priority: _parseInt(map['priority'], 5),
       orderHint: (map['order_hint'] ?? 1000) as int,
       completedAt: _parseDateTime(map['completed_at']),
+      goalStepId: resolvedGoalStepId,
+      goalId: resolvedGoalId,
     );
   }
 
@@ -132,6 +163,9 @@ class TaskItem {
     DateTime? targetAt,
     bool clearDueAt = false,
     bool clearTargetAt = false,
+    bool clearGoalStep = false,
+    String? goalStepId,
+    String? goalId,
     int? priority,
     int? orderHint,
     DateTime? completedAt,
@@ -146,6 +180,8 @@ class TaskItem {
       startDate: startDate ?? this.startDate,
       dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
       targetAt: clearTargetAt ? null : (targetAt ?? this.targetAt),
+      goalStepId: clearGoalStep ? null : (goalStepId ?? this.goalStepId),
+      goalId: goalId ?? (clearGoalStep ? null : this.goalId),
       priority: priority ?? this.priority,
       orderHint: orderHint ?? this.orderHint,
       completedAt: completedAt ?? this.completedAt,

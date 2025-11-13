@@ -24,13 +24,17 @@ class NavigateButton extends StatelessWidget {
         child: iconData == null
             ? Text(
                 title,
-                style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
               )
             : Row(
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (iconSpace > 0) SizedBox(width: iconSpace),
                   Icon(iconData, size: 18),

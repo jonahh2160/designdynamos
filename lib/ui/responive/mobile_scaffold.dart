@@ -27,14 +27,15 @@ class _MobileScaffoldState extends State<MobileScaffold> {
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: IconButton(
-                    onPressed: () {
-                      _globalKey.currentState!.openDrawer();
-                    },
-                    icon: const Icon(
-                      Icons.sort,
-                      size: 30.0,
-                      color: AppColors.indigo,
-                    )),
+                  onPressed: () {
+                    _globalKey.currentState!.openDrawer();
+                  },
+                  icon: const Icon(
+                    Icons.sort,
+                    size: 30.0,
+                    color: AppColors.indigo,
+                  ),
+                ),
               ),
             ),
           ],
