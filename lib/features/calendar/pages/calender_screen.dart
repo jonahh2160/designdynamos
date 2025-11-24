@@ -33,20 +33,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     // Filter tasks for selected day
     final tasksForSelectedDay = tasks.where((task) {
-      final startDate = task.startDate;
-      final dueAt = task.dueAt;
-      if (startDate == null) return false;
-      
-      if (!task.isDone) {
-      // Incomplete tasks: show if startDate is on or before selected day
-        return !startDate.isAfter(_selectedDay);
-      } 
-        // Completed tasks: only show on the day they were scheduled
-      return startDate.year == _selectedDay.year &&
-          startDate.month == _selectedDay.month &&
-          startDate.day == _selectedDay.day;
-      
-    }).toList()..sort((a, b) => a.orderHint.compareTo(b.orderHint));
+      final dueLocal = task.dueAt?.toLocal();
+      if (dueLocal == null) return false; // ignore tasks with no due date
+       final dueDate = DateTime(dueLocal.year, dueLocal.month, dueLocal.day);
+       final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+
+        // Show task if it's due on the selected day
+        return dueDate == selectedDate;
+    }).toList()
+      ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
 
     return Scaffold(
       backgroundColor: AppColors.background,

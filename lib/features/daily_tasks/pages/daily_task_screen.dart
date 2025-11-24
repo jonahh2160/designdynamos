@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
 
 import 'package:intl/intl.dart';
 
@@ -26,6 +27,8 @@ class DailyTaskScreen extends StatefulWidget {
 class _DailyTaskScreenState extends State<DailyTaskScreen> {
   bool _isAdding = false;
   StreamSubscription<AuthState>? _authSub;
+
+  bool _overdueExpanded = true;
 
   Future<void> _openFilterSheet() async {
     final p = context.read<TaskProvider>();
@@ -142,10 +145,12 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   void initState() {
     super.initState();
     //initial fetch after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null) {
-        context.read<TaskProvider>().refreshToday();
+        final provider = context.read<TaskProvider>();
+        await provider.refreshToday();
+        await provider.refreshAllTasks(); // <-- ensure _allTasks is loaded
       }
     });
 
@@ -195,8 +200,16 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final open = p.today.where((t) => !t.isDone)
-      .toList()
+    final open = p.today.where((t) {
+      // Exclude finished tasks
+      if (t.isDone) return false;
+
+      // Exclude overdue from open only if the filter is off
+      if (!p.includeOverdue && p.overdueTasks.contains(t)) return false;
+
+      // Otherwise include it
+      return true;
+    }).toList()
       ..sort((a,b) => a.orderHint.compareTo(b.orderHint)); //Order sorting [MJ]
 
     final finished = p.today.where((t) => t.isDone)
@@ -384,6 +397,47 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                            ExpansionTile(
+                              key: const PageStorageKey('overdueTasks'),
+                              initiallyExpanded: _overdueExpanded,
+                              onExpansionChanged: (expanded) {
+                                setState(() {
+                                  _overdueExpanded = expanded;
+                                });
+                              },
+                              leading: Icon(
+                                p.overdueTasks.isNotEmpty ? Icons.warning : Icons.check_circle,
+                                color: p.overdueTasks.isNotEmpty ? Colors.red : Colors.green,
+                              ),
+                              title: Text(
+                                p.overdueTasks.isNotEmpty
+                                    ? 'Overdue assignments need attention!'
+                                    : 'No overdue assignments',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              children: [
+                                if (p.overdueTasks.isNotEmpty)
+                                  for (final overdue in p.overdueTasks)
+                                    OverdueTaskAlert(
+                                      task: overdue,
+                                      onDelete: (task) async => await p.deleteTask(task.id),
+                                      onComplete: (task) async => await p.toggleDone(task.id, true),
+                                      onMoveDate: (task) async {
+                                        final picked = await showDatePicker(
+                                          context: context,
+                                          initialDate: DateTime.now(),
+                                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                                        );
+                                        if (picked != null) {
+                                          await p.updateTask(task.id, dueDatePart: picked);
+                                        }
+                                      }
+                                    ),
+                              ],
+                            ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(

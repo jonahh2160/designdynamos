@@ -98,6 +98,14 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  List<TaskItem> get overdueTasks {
+  final now = DateTime.now();
+  return _allTasks
+      .where((t) => !t.isDone && t.dueAt != null && t.dueAt!.isBefore(now))
+      .toList()
+    ..sort((a, b) => a.dueAt!.compareTo(b.dueAt!));
+  }
+
   Future<void> refreshAllTasks() async {
     _loading = true;
     notifyListeners();
@@ -110,6 +118,8 @@ class TaskProvider extends ChangeNotifier {
       notifyListeners();
     }
   } 
+
+
 
   Future<void> refreshToday() => refreshDaily(day: DateTime.now());
 
