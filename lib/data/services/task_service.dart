@@ -77,6 +77,8 @@ class TaskService {
     bool clearGoalStep = false,
     int? priority,
     String? iconName,
+    int? estimatedMinutes,
+    bool clearEstimatedMinutes = false,
     bool? isDone,
     DateTime? completedAt,
   }) async {
@@ -96,6 +98,11 @@ class TaskService {
 
     if (priority != null) payload['priority'] = priority;
     if (iconName != null) payload['icon_name'] = iconName;
+    if (clearEstimatedMinutes) {
+      payload['estimated_minutes'] = null;
+    } else if (estimatedMinutes != null) {
+      payload['estimated_minutes'] = estimatedMinutes;
+    }
     if (isDone != null) {
       payload['is_done'] = isDone;
       payload['completed_at'] = isDone

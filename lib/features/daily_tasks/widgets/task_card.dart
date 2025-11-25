@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart';
 import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/icon_container.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/status_pip.dart';
@@ -93,7 +94,13 @@ class TaskCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(task.title, style: titleStyle),
+                      Text(
+                        task.title,
+                        style: titleStyle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                      ),
                       const SizedBox(height: 6),
                       _MetadataRow(
                         task: task,
@@ -187,6 +194,14 @@ class _MetadataRow extends StatelessWidget {
         MetaChip(
           icon: Icons.calendar_today_outlined,
           label: _formatDueLabel(task.dueAt!),
+        ),
+      );
+    }
+    if (task.estimatedMinutes != null) {
+      chips.add(
+        MetaChip(
+          icon: Icons.timelapse,
+          label: formatEstimateLabel(task.estimatedMinutes!),
         ),
       );
     }

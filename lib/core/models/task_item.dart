@@ -9,6 +9,7 @@ class TaskItem {
     this.startDate,
     this.dueAt,
     this.targetAt,
+    this.estimatedMinutes,
     this.priority = 5,
     this.orderHint = 1000,
     this.completedAt,
@@ -25,6 +26,7 @@ class TaskItem {
   final DateTime? startDate;
   final DateTime? dueAt;
   final DateTime? targetAt;
+  final int? estimatedMinutes;
   final int priority;
   final int orderHint;
   final DateTime? completedAt;
@@ -75,6 +77,13 @@ class TaskItem {
     return fallback;
   }
 
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
   //factory construtor is a special type of constructor that can return an instance of the class(existing, chached, new, or even subclass)
   //dynamic type is a special type that allows a variable to hold values of any type, and type can change durring runtime
   factory TaskItem.fromMap(Map<String, dynamic> map) {
@@ -102,6 +111,7 @@ class TaskItem {
       startDate: _parseDateTime(map['start_at'] ?? map['start_date']),
       dueAt: _parseDateTime(map['due_at'] ?? map['due_date']),
       targetAt: _parseDateTime(map['target_at']),
+      estimatedMinutes: _parseNullableInt(map['estimated_minutes']),
       priority: _parseInt(map['priority'], 5),
       orderHint: (map['order_hint'] ?? 1000) as int,
       completedAt: _parseDateTime(map['completed_at']),
@@ -118,6 +128,7 @@ class TaskItem {
     'start_at': _utcString(startDate),
     'due_at': _utcString(dueAt),
     'target_at': _utcString(targetAt),
+    'estimated_minutes': estimatedMinutes,
     'points': points,
     'priority': priority,
     'order_hint': orderHint,
@@ -130,6 +141,8 @@ class TaskItem {
     bool clearDueAt = false,
     bool clearTargetAt = false,
     DateTime? overrideCompletedAt,
+    bool clearEstimatedMinutes = false,
+    int? overrideEstimatedMinutes,
   }) {
     final data = <String, dynamic>{
       'title': title,
@@ -138,6 +151,9 @@ class TaskItem {
       'start_at': _utcString(startDate),
       'due_at': clearDueAt ? null : _utcString(dueAt),
       'target_at': clearTargetAt ? null : _utcString(targetAt),
+      'estimated_minutes': clearEstimatedMinutes
+          ? null
+          : (overrideEstimatedMinutes ?? estimatedMinutes),
       'points': points,
       'priority': priority,
       'order_hint': orderHint,
@@ -169,6 +185,8 @@ class TaskItem {
     int? priority,
     int? orderHint,
     DateTime? completedAt,
+    int? estimatedMinutes,
+    bool clearEstimatedMinutes = false,
   }) {
     return TaskItem(
       id: id ?? this.id,
@@ -185,6 +203,9 @@ class TaskItem {
       priority: priority ?? this.priority,
       orderHint: orderHint ?? this.orderHint,
       completedAt: completedAt ?? this.completedAt,
+      estimatedMinutes: clearEstimatedMinutes
+          ? null
+          : (estimatedMinutes ?? this.estimatedMinutes),
     );
   }
 }

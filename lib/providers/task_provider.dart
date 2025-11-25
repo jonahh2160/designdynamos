@@ -29,6 +29,7 @@ class TaskProvider extends ChangeNotifier {
   bool _includeOverdue = true;
   bool _includeSpanning = true;
   bool _includeUndated = false;
+  bool _sortByEstimate = false;
   List<TaskItem> get unassignedTasks =>
       List.unmodifiable(_today.where((task) => task.goalStepId == null));
 
@@ -39,6 +40,7 @@ class TaskProvider extends ChangeNotifier {
   bool get includeOverdue => _includeOverdue;
   bool get includeSpanning => _includeSpanning;
   bool get includeUndated => _includeUndated;
+  bool get sortByEstimate => _sortByEstimate;
   List<DbSubtask> subtasksOf(String taskId) =>
       List.unmodifiable(_subtasksByTask[taskId] ?? const []);
   (int done, int total) subtaskProgress(String taskId) {
@@ -99,6 +101,13 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<void> refreshToday() => refreshDaily(day: DateTime.now());
+
+  void setSortByEstimate(bool enabled) {
+    if (_sortByEstimate == enabled) return;
+    _sortByEstimate = enabled;
+    _sortToday();
+    notifyListeners();
+  }
 
   void selectTask(String? id) {
     if (_selectedTaskId == id) return;
@@ -217,6 +226,8 @@ class TaskProvider extends ChangeNotifier {
     bool clearGoalStep = false,
     int? priority,
     String? iconName,
+    int? estimatedMinutes,
+    bool clearEstimatedMinutes = false,
   }) async {
     final index = _today.indexWhere((task) => task.id == id);
     if (index < 0) return;
@@ -230,6 +241,15 @@ class TaskProvider extends ChangeNotifier {
 
     if (priority != null) {
       updated = updated.copyWith(priority: priority);
+    }
+
+    int? nextEstimatedMinutes = before.estimatedMinutes;
+    if (clearEstimatedMinutes) {
+      nextEstimatedMinutes = null;
+      updated = updated.copyWith(clearEstimatedMinutes: true);
+    } else if (estimatedMinutes != null) {
+      nextEstimatedMinutes = estimatedMinutes;
+      updated = updated.copyWith(estimatedMinutes: estimatedMinutes);
     }
 
     DateTime? nextDueAt = before.dueAt;
@@ -280,6 +300,11 @@ class TaskProvider extends ChangeNotifier {
     final targetAtForUpdate = clearTargetAt
         ? null
         : (nextTargetAt != before.targetAt ? nextTargetAt : null);
+    final estimateForUpdate = clearEstimatedMinutes
+        ? null
+        : (nextEstimatedMinutes != before.estimatedMinutes
+            ? nextEstimatedMinutes
+            : null);
 
     try {
       await _service.updateTask(
@@ -292,6 +317,8 @@ class TaskProvider extends ChangeNotifier {
         clearGoalStep: clearGoalStep,
         priority: priority,
         iconName: iconName,
+        estimatedMinutes: estimateForUpdate,
+        clearEstimatedMinutes: clearEstimatedMinutes,
       );
     } catch (error) {
       _today[index] = before;
@@ -446,6 +473,16 @@ class TaskProvider extends ChangeNotifier {
     _today.sort((a, b) {
       if (a.isDone != b.isDone) {
         return a.isDone ? 1 : -1;
+      }
+      if (_sortByEstimate) {
+        final estA = a.estimatedMinutes;
+        final estB = b.estimatedMinutes;
+        if (estA != null || estB != null) {
+          if (estA == null) return 1;
+          if (estB == null) return -1;
+          final estimateComparison = estB.compareTo(estA);
+          if (estimateComparison != 0) return estimateComparison;
+        }
       }
       final priorityComparison = b.priority.compareTo(a.priority);
       if (priorityComparison != 0) {

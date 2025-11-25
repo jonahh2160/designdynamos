@@ -10,6 +10,7 @@ import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart
 import 'package:designdynamos/features/daily_tasks/widgets/icon_container.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/status_pip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
+import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart';
 
 class TaskDetailPanel extends StatelessWidget {
   const TaskDetailPanel({
@@ -21,7 +22,8 @@ class TaskDetailPanel extends StatelessWidget {
     required this.onClearTargetAt,
     required this.onDueAtChange,
     required this.onDueTimeChange,
-    required this.onClearDueAt,
+    required this.onEstimateChange,
+    required this.onClearEstimate,
     required this.onPriorityChange,
     required this.onIconChange,
     required this.subtasks,
@@ -43,7 +45,8 @@ class TaskDetailPanel extends StatelessWidget {
   final Future<void> Function() onClearTargetAt;
   final Future<void> Function(DateTime date) onDueAtChange;
   final Future<void> Function(Duration timeOfDay) onDueTimeChange;
-  final Future<void> Function() onClearDueAt;
+  final Future<void> Function(int? minutes) onEstimateChange;
+  final Future<void> Function() onClearEstimate;
   final Future<void> Function(int priority) onPriorityChange;
   final Future<void> Function(String iconName) onIconChange;
   final List<DbSubtask> subtasks;
@@ -88,6 +91,9 @@ class TaskDetailPanel extends StatelessWidget {
     final dueTimeLabel = task!.dueAt != null
         ? DateFormat.jm().format(task!.dueAt!.toLocal())
         : 'Add due time';
+    final estimateLabel = task!.estimatedMinutes != null
+        ? formatEstimateLabel(task!.estimatedMinutes!)
+        : 'Add estimate';
 
     return SingleChildScrollView(
       child: Column(
@@ -114,74 +120,91 @@ class TaskDetailPanel extends StatelessWidget {
                     const SizedBox(width: 12),
                     IconContainer(icon: iconData, isCompleted: task!.isDone),
                     const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task!.title,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            task!.isDone ? 'Completed' : 'In progress',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppColors.textSecondary),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task!.title,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          task!.isDone ? 'Completed' : 'In progress',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: task!.isDone
-                          ? 'Mark incomplete'
-                          : 'Mark complete',
-                      onPressed: () => onToggleComplete(!task!.isDone),
-                      icon: Icon(
-                        task!.isDone
-                            ? Icons.undo_rounded
-                            : Icons.check_circle_outline,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Delete task',
-                      onPressed: () async {
-                        final ok =
-                            await showDialog<bool>(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('Delete task?'),
-                                content: const Text('This cannot be undone.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        IconButton(
+                          tooltip: task!.isDone
+                              ? 'Mark incomplete'
+                              : 'Mark complete',
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(6),
+                          onPressed: () => onToggleComplete(!task!.isDone),
+                          icon: Icon(
+                            task!.isDone
+                                ? Icons.undo_rounded
+                                : Icons.check_circle_outline,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Delete task',
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(6),
+                          onPressed: () async {
+                            final ok =
+                                await showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Delete task?'),
+                                    content: const Text(
+                                      'This cannot be undone.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            ) ??
-                            false;
-                        if (ok) await onDeleteTask();
-                      },
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Hide details',
-                      onPressed: onClose,
-                      icon: const Icon(
-                        Icons.close,
-                        color: AppColors.textSecondary,
-                      ),
+                                ) ??
+                                false;
+                            if (ok) await onDeleteTask();
+                          },
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Hide details',
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(6),
+                          onPressed: onClose,
+                          icon: const Icon(
+                            Icons.close,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -239,13 +262,6 @@ class TaskDetailPanel extends StatelessWidget {
                   icon: Icons.calendar_today_outlined,
                   title: 'Due date',
                   value: dueDateLabel,
-                  trailing: task!.dueAt != null
-                      ? IconButton(
-                          tooltip: 'Clear due date',
-                          onPressed: onClearDueAt,
-                          icon: const Icon(Icons.close),
-                        )
-                      : null,
                   onTap: () async {
                     final now = DateTime.now();
                     final initial = task!.dueAt ?? now;
@@ -281,6 +297,69 @@ class TaskDetailPanel extends StatelessWidget {
                         Duration(hours: picked.hour, minutes: picked.minute),
                       );
                     }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _DetailTile(
+                  icon: Icons.timelapse,
+                  title: 'Estimate',
+                  value: estimateLabel,
+                  trailing: task!.estimatedMinutes != null
+                      ? IconButton(
+                          tooltip: 'Clear estimate',
+                          onPressed: onClearEstimate,
+                          icon: const Icon(Icons.close),
+                        )
+                      : null,
+                  onTap: () async {
+                    final controller = TextEditingController(
+                      text: formatEstimateInput(task!.estimatedMinutes),
+                    );
+                    final newValue = await showDialog<String>(
+                      context: context,
+                      builder: (ctx) {
+                        return AlertDialog(
+                          title: const Text('Set estimate'),
+                          content: TextField(
+                            controller: controller,
+                            autofocus: true,
+                            keyboardType: TextInputType.datetime,
+                            decoration: const InputDecoration(
+                              hintText: 'Minutes or H:MM (e.g., 45 or 1:30)',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () =>
+                                  Navigator.pop(ctx, controller.text.trim()),
+                              child: const Text('Save'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (newValue == null) return;
+                    if (newValue.isEmpty) {
+                      await onClearEstimate();
+                      return;
+                    }
+
+                    final parsed = parseEstimateMinutes(newValue);
+                    if (parsed == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Enter minutes or H:MM (e.g., 45 or 1:30)'),
+                        ),
+                      );
+                      return;
+                    }
+                    await onEstimateChange(parsed);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -565,6 +644,7 @@ class _PriorityTile extends StatelessWidget {
 
 String _formatLongDate(DateTime date) =>
     DateFormat.yMMMMd().add_jm().format(date.toLocal());
+
 
 class _NotesEditor extends StatefulWidget {
   const _NotesEditor({required this.initial, required this.onSave});

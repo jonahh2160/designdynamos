@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart';
 import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
@@ -17,11 +19,13 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _estimateController = TextEditingController();
   DateTime? _dueAt = _defaultDueAt(DateTime.now());
   DateTime? _targetAt;
   int _priority = 5;
   String _selectedIcon = TaskIconRegistry.defaultOption.name;
   String? _errorText;
+  String? _estimateErrorText;
   final List<TextEditingController> _subtaskControllers = [];
   final TextEditingController _labelInputController = TextEditingController();
   final Set<String> _labels = <String>{};
@@ -30,6 +34,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _estimateController.dispose();
     for (final c in _subtaskControllers) {
       c.dispose();
     }
@@ -85,12 +90,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     }
   }
 
-  void _clearDueAt() {
-    setState(() {
-      _dueAt = null;
-    });
-  }
-
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
@@ -98,6 +97,17 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         _errorText = 'Please enter a task title';
       });
       return;
+    }
+
+    final rawEstimate = _estimateController.text.trim();
+    final parsedEstimate = parseEstimateMinutes(rawEstimate);
+    if (rawEstimate.isNotEmpty && parsedEstimate == null) {
+      setState(() {
+        _estimateErrorText = 'Use minutes or H:MM (e.g., 45 or 1:30)';
+      });
+      return;
+    } else {
+      _estimateErrorText = null;
     }
 
     final subtasks = _subtaskControllers
@@ -113,6 +123,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         dueAt: _dueAt ?? _defaultDueAt(DateTime.now()),
         targetAt: _targetAt,
         priority: _priority,
+        estimatedMinutes: parsedEstimate,
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -170,14 +181,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     ),
                   ),
                 ),
-                if (_dueAt != null) ...[
-                  const SizedBox(width: 12),
-                  IconButton(
-                    tooltip: 'Clear due date',
-                    onPressed: _clearDueAt,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -260,6 +263,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   ),
                 ],
               ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _estimateController,
+              keyboardType: const TextInputType.numberWithOptions(
+                signed: false,
+                decimal: false,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+              ],
+              decoration: InputDecoration(
+                hintText: 'Estimate (minutes or H:MM)',
+                errorText: _estimateErrorText,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(

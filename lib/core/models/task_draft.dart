@@ -7,6 +7,7 @@ class TaskDraft {
     this.startAt,
     this.dueAt,
     this.targetAt,
+    this.estimatedMinutes,
     this.goalStepId,
     this.goalId,
     this.priority = 5,
@@ -21,6 +22,7 @@ class TaskDraft {
   final DateTime? startAt;
   final DateTime? dueAt;
   final DateTime? targetAt;
+  final int? estimatedMinutes;
   final String? goalStepId;
   final String? goalId;
   final int priority;
@@ -74,6 +76,7 @@ class TaskDraft {
       startDate: resolvedStart,
       dueAt: resolvedDue,
       targetAt: resolvedTarget,
+      estimatedMinutes: estimatedMinutes,
       goalStepId: goalStepId,
       goalId: goalId,
       priority: priority,

@@ -33,6 +33,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     bool includeOverdue = p.includeOverdue;
     bool includeSpanning = p.includeSpanning;
     bool includeUndated = p.includeUndated;
+    bool sortByEstimate = p.sortByEstimate;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -106,6 +107,12 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     value: includeUndated,
                     onChanged: (v) => setState(() => includeUndated = v),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Sort by longest estimate first'),
+                    value: sortByEstimate,
+                    onChanged: (v) => setState(() => sortByEstimate = v),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -124,6 +131,9 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                             includeSpanning: includeSpanning,
                             includeUndated: includeUndated,
                           );
+                          context
+                              .read<TaskProvider>()
+                              .setSortByEstimate(sortByEstimate);
                         },
                         child: const Text('Apply'),
                       ),
@@ -308,16 +318,41 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           );
                         }
                       },
-                      onClearDueAt: () async {
+                      onEstimateChange: (minutes) async {
                         final task = p.selectedTask;
                         if (task == null) return;
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          await p.updateTask(task.id, clearDueAt: true);
+                          await p.updateTask(
+                            task.id,
+                            estimatedMinutes: minutes,
+                            clearEstimatedMinutes: minutes == null,
+                          );
                         } catch (error) {
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('Failed to clear due date: $error'),
+                              content: Text(
+                                'Failed to update estimate: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onClearEstimate: () async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(
+                            task.id,
+                            clearEstimatedMinutes: true,
+                          );
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to clear estimate: $error',
+                              ),
                             ),
                           );
                         }
@@ -385,7 +420,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       onClose: () => p.selectTask(null),
                     );
 
-              final panelWidth = constraints.maxWidth >= 1400 ? 360.0 : 320.0;
+              final availableWidth = constraints.maxWidth;
+              final panelWidth = math.max(
+                280.0,
+                math.min(availableWidth * 0.34, 380.0),
+              );
               final availableHeight = MediaQuery.of(context).size.height;
               final compactPanelHeight = math.min(availableHeight * 0.6, 560.0);
 
