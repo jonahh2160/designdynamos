@@ -94,6 +94,10 @@ class TaskProvider extends ChangeNotifier {
       if (sel != null) {
         await _loadDetails(sel);
       }
+    } catch (error) {
+      //fallback to empty list on fetch failure (e.g., auth issues)
+      _today = [];
+      _selectedTaskId = null;
     } finally {
       _loading = false;
       notifyListeners();
@@ -240,7 +244,10 @@ class TaskProvider extends ChangeNotifier {
     }
 
     if (priority != null) {
-      updated = updated.copyWith(priority: priority);
+      updated = updated.copyWith(
+        priority: priority,
+        points: priority * 2, //keep points in sync locally with priority
+      );
     }
 
     int? nextEstimatedMinutes = before.estimatedMinutes;
@@ -470,6 +477,8 @@ class TaskProvider extends ChangeNotifier {
   }
 
   void _sortToday() {
+    //ensure list is growable before sorting (avoid const list sort errors)
+    _today = List<TaskItem>.from(_today);
     _today.sort((a, b) {
       if (a.isDone != b.isDone) {
         return a.isDone ? 1 : -1;

@@ -14,8 +14,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:designdynamos/providers/coin_provider.dart';
 
 import 'package:intl/intl.dart';
+import 'package:designdynamos/core/models/task_item.dart';
 
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
@@ -156,15 +158,37 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null) {
         context.read<TaskProvider>().refreshToday();
+        context.read<CoinProvider>().refresh();
       }
     });
 
     //ensuring we refresh once auth session is available (e.g., after app start) and refetch when auth state changes
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      if (mounted && event.session != null) {
+      if (!mounted) return;
+      if (event.session != null) {
         context.read<TaskProvider>().refreshToday();
+        context.read<CoinProvider>().refresh();
+      } else {
+        context.read<CoinProvider>().reset();
       }
     });
+  }
+
+  Future<void> _toggleTaskCompletion(
+    TaskProvider provider,
+    CoinProvider coinProvider,
+    TaskItem task,
+    bool done,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await provider.toggleDone(task.id, done);
+      await coinProvider.refresh();
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to update task: $error')),
+      );
+    }
   }
 
   Future<void> _handleAddTask() async {
@@ -201,6 +225,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<TaskProvider>();
+    final coins = context.watch<CoinProvider>();
     if (p.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -227,16 +252,12 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       onToggleComplete: (done) async {
                         final task = p.selectedTask;
                         if (task == null) return;
-                        final messenger = ScaffoldMessenger.of(context);
-                        try {
-                          await p.toggleDone(task.id, done);
-                        } catch (error) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to update task: $error'),
-                            ),
-                          );
-                        }
+                        await _toggleTaskCompletion(
+                          p,
+                          context.read<CoinProvider>(),
+                          task,
+                          done,
+                        );
                       },
                       onTargetAtChange: (date) async {
                         final task = p.selectedTask;
@@ -437,7 +458,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     ProgressOverview(
                       completed: finished.length,
                       total: p.today.length,
-                      coins: 600, //TODO: read from profile provider
+                      coins: coins.totalCoins,
                       streakLabel:
                           '${finished.length}/${p.today.length} tasks completed',
                     ),
@@ -476,9 +497,14 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 task: task,
                                 isSelected: task.id == selectedTaskId,
                                 onTap: () => p.selectTask(task.id),
-                                onToggle: () => context
-                                    .read<TaskProvider>()
-                                    .toggleDone(task.id, !task.isDone),
+                                onToggle: () {
+                                  _toggleTaskCompletion(
+                                    p,
+                                    context.read<CoinProvider>(),
+                                    task,
+                                    !task.isDone,
+                                  );
+                                },
                                 subtaskDone: p.subtaskProgress(task.id).$1,
                                 subtaskTotal: p.subtaskProgress(task.id).$2,
                                 labels: p.labelsOf(task.id),
@@ -493,9 +519,14 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 task: task,
                                 isSelected: task.id == selectedTaskId,
                                 onTap: () => p.selectTask(task.id),
-                                onToggle: () => context
-                                    .read<TaskProvider>()
-                                    .toggleDone(task.id, !task.isDone),
+                                onToggle: () {
+                                  _toggleTaskCompletion(
+                                    p,
+                                    context.read<CoinProvider>(),
+                                    task,
+                                    !task.isDone,
+                                  );
+                                },
                                 subtaskDone: p.subtaskProgress(task.id).$1,
                                 subtaskTotal: p.subtaskProgress(task.id).$2,
                                 labels: p.labelsOf(task.id),

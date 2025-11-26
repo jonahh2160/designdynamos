@@ -1,0 +1,42 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class CoinBalance {
+  const CoinBalance({required this.totalCoins, required this.todayCoins});
+
+  final int totalCoins;
+  final int todayCoins;
+}
+
+class CoinService {
+  CoinService(this._client);
+
+  final SupabaseClient _client;
+
+  Future<CoinBalance> fetchBalance() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      return const CoinBalance(totalCoins: 0, todayCoins: 0);
+    }
+
+    final response = await _client.rpc('get_coin_balance');
+
+    Map<String, dynamic>? row;
+    if (response is Map<String, dynamic>) {
+      row = response;
+    } else if (response is List && response.isNotEmpty) {
+      final first = response.first;
+      if (first is Map<String, dynamic>) {
+        row = first;
+      }
+    }
+
+    if (row == null) {
+      return const CoinBalance(totalCoins: 0, todayCoins: 0);
+    }
+
+    return CoinBalance(
+      totalCoins: (row['total_coins'] ?? 0) as int,
+      todayCoins: (row['today_coins'] ?? 0) as int,
+    );
+  }
+}

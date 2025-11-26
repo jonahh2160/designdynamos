@@ -15,12 +15,20 @@ import 'providers/goal_provider.dart';
 import 'data/services/task_service.dart';
 import 'data/services/goal_service.dart';
 import 'data/services/goal_step_task_service.dart';
+import 'providers/coin_provider.dart';
+import 'data/services/coin_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.init(); //initialize Supabase
 
-  await SupabaseService.signInWithTestUser(); //for testing
+  // Attempt test sign-in; don't crash the app if credentials or URL are wrong.
+  try {
+    await SupabaseService.signInWithTestUser();
+  } catch (error, stack) {
+    debugPrint('Test sign-in failed: $error');
+    debugPrint('$stack');
+  }
 
   runApp(
     MultiProvider(
@@ -34,6 +42,10 @@ void main() async {
             GoalService(SupabaseService.client),
             GoalStepTaskService(SupabaseService.client),
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              CoinProvider(CoinService(SupabaseService.client))..refresh(),
         ),
       ],
       child: const MyApp(),

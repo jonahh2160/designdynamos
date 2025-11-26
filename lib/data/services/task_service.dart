@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/data/services/goal_step_task_service.dart';
@@ -22,23 +23,34 @@ class TaskService {
     final userId = _sb.auth.currentUser?.id;
     if (userId == null) {
       //no user session; return empty to avoid RLS errors
-      return const [];
+      return <TaskItem>[];
     }
 
-    final response = await _sb.rpc(
-      'get_daily_tasks_rpc',
-      params: {
-        'day': day.toUtc().toIso8601String(),
-        'include_overdue': includeOverdue,
-        'include_spanning': includeSpanning,
-        'include_backlog': includeUndated,
-      },
-    );
+    try {
+      final response = await _sb.rpc(
+        'get_daily_tasks_rpc',
+        params: {
+          'day': day.toUtc().toIso8601String(),
+          'include_overdue': includeOverdue,
+          'include_spanning': includeSpanning,
+          'include_backlog': includeUndated,
+        },
+      );
 
-    final List<Map<String, dynamic>> res = (response as List)
-        .cast<Map<String, dynamic>>();
-    final tasks = res.map(TaskItem.fromMap).toList();
-    return tasks;
+      if (response is List) {
+        final List<Map<String, dynamic>> res =
+            response.cast<Map<String, dynamic>>();
+        return res.map(TaskItem.fromMap).toList();
+      }
+
+      // Unexpected shape (e.g., null/Map) – log and return empty
+      debugPrint('get_daily_tasks_rpc returned unexpected shape: $response');
+      return <TaskItem>[];
+    } catch (error, stack) {
+      debugPrint('get_daily_tasks_rpc failed: $error');
+      debugPrint('$stack');
+      return <TaskItem>[];
+    }
   }
 
   //Convenience wrapper for "today"
