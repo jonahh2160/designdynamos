@@ -28,7 +28,6 @@ class TaskProvider extends ChangeNotifier {
   DateTime _day = DateTime.now();
   bool _includeOverdue = true;
   bool _includeSpanning = true;
-  bool _includeUndated = false;
   bool _sortByEstimate = false;
   List<TaskItem> get unassignedTasks =>
       List.unmodifiable(_today.where((task) => task.goalStepId == null));
@@ -39,7 +38,6 @@ class TaskProvider extends ChangeNotifier {
   DateTime get day => _day;
   bool get includeOverdue => _includeOverdue;
   bool get includeSpanning => _includeSpanning;
-  bool get includeUndated => _includeUndated;
   bool get sortByEstimate => _sortByEstimate;
   List<DbSubtask> subtasksOf(String taskId) =>
       List.unmodifiable(_subtasksByTask[taskId] ?? const []);
@@ -65,12 +63,10 @@ class TaskProvider extends ChangeNotifier {
     DateTime? day,
     bool? includeOverdue,
     bool? includeSpanning,
-    bool? includeUndated,
   }) async {
     if (day != null) _day = DateTime(day.year, day.month, day.day);
     if (includeOverdue != null) _includeOverdue = includeOverdue;
     if (includeSpanning != null) _includeSpanning = includeSpanning;
-    if (includeUndated != null) _includeUndated = includeUndated;
 
     _loading = true;
     notifyListeners();
@@ -80,9 +76,9 @@ class TaskProvider extends ChangeNotifier {
         _day,
         includeOverdue: _includeOverdue,
         includeSpanning: _includeSpanning,
-        includeUndated: _includeUndated,
       );
       _today = tasks;
+      _sortToday();
 
       if (_today.isEmpty) {
         _selectedTaskId = null;
@@ -94,10 +90,10 @@ class TaskProvider extends ChangeNotifier {
       if (sel != null) {
         await _loadDetails(sel);
       }
-    } catch (error) {
-      //fallback to empty list on fetch failure (e.g., auth issues)
-      _today = [];
-      _selectedTaskId = null;
+    } catch (error, stack) {
+      debugPrint('refreshDaily failed: $error');
+      debugPrint('$stack');
+      rethrow;
     } finally {
       _loading = false;
       notifyListeners();
@@ -483,6 +479,16 @@ class TaskProvider extends ChangeNotifier {
       if (a.isDone != b.isDone) {
         return a.isDone ? 1 : -1;
       }
+      final dueA = a.dueAt;
+      final dueB = b.dueAt;
+      if (dueA != null && dueB != null) {
+        final dueComparison = dueA.compareTo(dueB);
+        if (dueComparison != 0) return dueComparison;
+      } else if (dueA == null && dueB != null) {
+        return 1;
+      } else if (dueA != null && dueB == null) {
+        return -1;
+      }
       if (_sortByEstimate) {
         final estA = a.estimatedMinutes;
         final estB = b.estimatedMinutes;
@@ -493,29 +499,19 @@ class TaskProvider extends ChangeNotifier {
           if (estimateComparison != 0) return estimateComparison;
         }
       }
+      final targetA = a.targetAt;
+      final targetB = b.targetAt;
+      if (targetA != null && targetB != null) {
+        final targetComparison = targetA.compareTo(targetB);
+        if (targetComparison != 0) return targetComparison;
+      } else if (targetA == null && targetB != null) {
+        return 1;
+      } else if (targetA != null && targetB == null) {
+        return -1;
+      }
       final priorityComparison = b.priority.compareTo(a.priority);
       if (priorityComparison != 0) {
         return priorityComparison;
-      }
-      final plannedA = a.targetAt ?? a.dueAt;
-      final plannedB = b.targetAt ?? b.dueAt;
-      if (plannedA != null && plannedB != null) {
-        final plannedComparison = plannedA.compareTo(plannedB);
-        if (plannedComparison != 0) return plannedComparison;
-      } else if (plannedA == null && plannedB != null) {
-        return 1;
-      } else if (plannedA != null && plannedB == null) {
-        return -1;
-      }
-      final dueA = a.dueAt;
-      final dueB = b.dueAt;
-      if (dueA != null && dueB != null) {
-        final dueComparison = dueA.compareTo(dueB);
-        if (dueComparison != 0) return dueComparison;
-      } else if (dueA == null && dueB != null) {
-        return 1;
-      } else if (dueA != null && dueB == null) {
-        return -1;
       }
       return a.orderHint.compareTo(b.orderHint);
     });

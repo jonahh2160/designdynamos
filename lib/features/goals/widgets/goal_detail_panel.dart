@@ -15,6 +15,8 @@ class GoalDetailPanel extends StatelessWidget {
     required this.onAddTask,
     required this.onClose,
     required this.onUpdateMeta,
+    this.onDelete,
+    this.isDeleting = false,
   });
 
   final Goal? goal;
@@ -28,6 +30,8 @@ class GoalDetailPanel extends StatelessWidget {
     int? priority,
   })
   onUpdateMeta;
+  final Future<void> Function()? onDelete;
+  final bool isDeleting;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +80,24 @@ class GoalDetailPanel extends StatelessWidget {
                             ),
                       ),
                     ),
+                    if (onDelete != null) ...[
+                      IconButton(
+                        tooltip: isDeleting ? 'Deleting…' : 'Delete goal',
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(6),
+                        onPressed: isDeleting ? null : onDelete,
+                        icon: isDeleting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(
+                                Icons.delete_outline,
+                                color: AppColors.textSecondary,
+                              ),
+                      ),
+                    ],
                     IconButton(
                       onPressed: onClose,
                       tooltip: 'Close',

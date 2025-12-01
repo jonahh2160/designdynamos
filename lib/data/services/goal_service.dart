@@ -115,4 +115,39 @@ class GoalService {
         .single();
     return Goal.fromMap(row);
   }
+
+  Future<void> deleteGoal(String goalId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Cannot delete goal without an authenticated user.');
+    }
+
+    final stepRows = await _client
+        .from('goal_steps')
+        .select('id')
+        .eq('goal_id', goalId)
+        .eq('user_id', userId);
+    final List<Map<String, dynamic>> steps = (stepRows as List)
+        .cast<Map<String, dynamic>>();
+    final stepIds = steps.map((row) => row['id'] as String).toList();
+
+    if (stepIds.isNotEmpty) {
+      await _client
+          .from('goal_step_tasks')
+          .delete()
+          .inFilter('goal_step_id', stepIds)
+          .eq('user_id', userId);
+      await _client
+          .from('goal_steps')
+          .delete()
+          .eq('goal_id', goalId)
+          .eq('user_id', userId);
+    }
+
+    await _client
+        .from('goals')
+        .delete()
+        .eq('id', goalId)
+        .eq('user_id', userId);
+  }
 }

@@ -105,6 +105,15 @@ class GoalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteGoal(Goal goal) async {
+    await _goalService.deleteGoal(goal.id);
+    _goals = _goals.where((g) => g.id != goal.id).toList();
+    if (_selectedGoalId == goal.id) {
+      _selectedGoalId = _goals.isNotEmpty ? _goals.first.id : null;
+    }
+    notifyListeners();
+  }
+
   void _updateStep({
     required String goalId,
     required String stepId,

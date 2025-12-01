@@ -22,7 +22,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.init(); //initialize Supabase
 
-  // Attempt test sign-in; don't crash the app if credentials or URL are wrong.
+  //Attempt test sign-in; don't crash the app if credentials or URL are wrong.
   try {
     await SupabaseService.signInWithTestUser();
   } catch (error, stack) {
@@ -34,8 +34,13 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) =>
-              TaskProvider(TaskService(SupabaseService.client))..refreshToday(),
+          create: (_) {
+            final provider = TaskProvider(TaskService(SupabaseService.client));
+            provider
+                .refreshToday()
+                .catchError((error) => debugPrint('refreshToday failed: $error'));
+            return provider;
+          },
         ),
         ChangeNotifierProvider(
           create: (_) => GoalProvider(

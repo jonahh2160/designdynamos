@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/data/services/goal_step_task_service.dart';
@@ -17,7 +16,6 @@ class TaskService {
     DateTime day, {
     bool includeOverdue = true,
     bool includeSpanning = true,
-    bool includeUndated = false,
   }) async {
     //ensuring we only fetch tasks for the current authenticated user
     final userId = _sb.auth.currentUser?.id;
@@ -26,31 +24,85 @@ class TaskService {
       return <TaskItem>[];
     }
 
-    try {
-      final response = await _sb.rpc(
-        'get_daily_tasks_rpc',
-        params: {
-          'day': day.toUtc().toIso8601String(),
-          'include_overdue': includeOverdue,
-          'include_spanning': includeSpanning,
-          'include_backlog': includeUndated,
-        },
-      );
+    final query = _sb
+        .from('tasks')
+        .select(
+          '''
+            id,
+            user_id,
+            title,
+            notes,
+            priority,
+            is_done,
+            points,
+            order_hint,
+            created_at,
+            updated_at,
+            completed_at,
+            icon_name,
+            start_at,
+            due_at,
+            target_at,
+            estimated_minutes,
+            goal_step_tasks(
+              id,
+              goal_step_id,
+              goal_steps(goal_id)
+            )
+          ''',
+        )
+        .eq('user_id', userId)
+        .order('is_done', ascending: true)
+        .order('priority', ascending: false)
+        .order('target_at', ascending: true)
+        .order('due_at', ascending: true)
+        .order('order_hint', ascending: true);
 
-      if (response is List) {
-        final List<Map<String, dynamic>> res =
-            response.cast<Map<String, dynamic>>();
-        return res.map(TaskItem.fromMap).toList();
-      }
-
-      // Unexpected shape (e.g., null/Map) – log and return empty
-      debugPrint('get_daily_tasks_rpc returned unexpected shape: $response');
-      return <TaskItem>[];
-    } catch (error, stack) {
-      debugPrint('get_daily_tasks_rpc failed: $error');
-      debugPrint('$stack');
-      return <TaskItem>[];
+    final response = await query;
+    if (response is! List) {
+      throw StateError('getDailyTasks query returned unexpected shape: $response');
     }
+
+    final List<Map<String, dynamic>> res =
+        response.cast<Map<String, dynamic>>();
+    final all = res.map(TaskItem.fromMap).toList();
+
+    final dayStart = DateTime.utc(day.year, day.month, day.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+
+    final filtered = all.where((task) {
+      final start = task.startDate?.toUtc();
+      final due = task.dueAt?.toUtc();
+
+      final dueWithinDay =
+          due != null && !due.isBefore(dayStart) && due.isBefore(dayEnd);
+
+      final spanning = includeSpanning &&
+          start != null &&
+          due != null &&
+          !start.isAfter(dayEnd) &&
+          !due.isBefore(dayStart);
+
+      final overdue = includeOverdue && due != null && due.isBefore(dayStart);
+
+      return dueWithinDay || spanning || overdue;
+    }).toList();
+
+    filtered.sort((a, b) {
+      final dueA = a.dueAt;
+      final dueB = b.dueAt;
+      if (dueA != null && dueB != null) {
+        final cmp = dueA.compareTo(dueB);
+        if (cmp != 0) return cmp;
+      } else if (dueA == null && dueB != null) {
+        return 1;
+      } else if (dueA != null && dueB == null) {
+        return -1;
+      }
+      return a.orderHint.compareTo(b.orderHint);
+    });
+
+    return filtered;
   }
 
   //Convenience wrapper for "today"

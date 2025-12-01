@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:designdynamos/core/models/task_draft.dart';
+import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/core/widgets/action_chip_button.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/add_task_card.dart';
@@ -10,14 +12,11 @@ import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:provider/provider.dart';
-import 'package:designdynamos/providers/coin_provider.dart';
-
 import 'package:intl/intl.dart';
-import 'package:designdynamos/core/models/task_item.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:designdynamos/providers/coin_provider.dart';
 
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
@@ -34,7 +33,6 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     DateTime day = p.day;
     bool includeOverdue = p.includeOverdue;
     bool includeSpanning = p.includeSpanning;
-    bool includeUndated = p.includeUndated;
     bool sortByEstimate = p.sortByEstimate;
 
     await showModalBottomSheet<void>(
@@ -62,7 +60,6 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                             day = DateTime.now();
                             includeOverdue = true;
                             includeSpanning = true;
-                            includeUndated = false;
                           });
                         },
                         child: const Text('Reset'),
@@ -98,16 +95,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Include spanning window'),
                     subtitle: const Text(
-                      'Show tasks where day falls within start → due',
+                      'Show tasks where the day falls between start and due',
                     ),
                     value: includeSpanning,
                     onChanged: (v) => setState(() => includeSpanning = v),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Include undated backlog'),
-                    value: includeUndated,
-                    onChanged: (v) => setState(() => includeUndated = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -126,16 +117,25 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () async {
+                          final taskProvider = context.read<TaskProvider>();
+                          final messenger = ScaffoldMessenger.of(context);
                           Navigator.of(context).pop();
-                          await context.read<TaskProvider>().refreshDaily(
-                            day: day,
-                            includeOverdue: includeOverdue,
-                            includeSpanning: includeSpanning,
-                            includeUndated: includeUndated,
-                          );
-                          context
-                              .read<TaskProvider>()
-                              .setSortByEstimate(sortByEstimate);
+                          try {
+                            await taskProvider.refreshDaily(
+                                  day: day,
+                                  includeOverdue: includeOverdue,
+                                  includeSpanning: includeSpanning,
+                                );
+                            taskProvider.setSortByEstimate(sortByEstimate);
+                          } catch (error) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Failed to apply filters: $error',
+                                ),
+                              ),
+                            );
+                          }
                         },
                         child: const Text('Apply'),
                       ),
@@ -157,7 +157,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null) {
-        context.read<TaskProvider>().refreshToday();
+        context
+            .read<TaskProvider>()
+            .refreshToday()
+            .catchError((error) => debugPrint('refreshToday failed: $error'));
         context.read<CoinProvider>().refresh();
       }
     });
@@ -166,7 +169,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
       if (!mounted) return;
       if (event.session != null) {
-        context.read<TaskProvider>().refreshToday();
+        context
+            .read<TaskProvider>()
+            .refreshToday()
+            .catchError((error) => debugPrint('refreshToday failed: $error'));
         context.read<CoinProvider>().refresh();
       } else {
         context.read<CoinProvider>().reset();
@@ -478,6 +484,12 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                         const ActionChipButton(
                           icon: Icons.auto_awesome,
                           label: 'Suggestions',
+                        ),
+                        const SizedBox(width: 12),
+                        ActionChipButton(
+                          icon: Icons.add,
+                          label: 'Add task',
+                          onTap: _handleAddTask,
                         ),
                         const SizedBox(width: 12),
                         ActionChipButton(

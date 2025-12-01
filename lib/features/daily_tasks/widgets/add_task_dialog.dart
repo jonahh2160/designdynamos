@@ -20,7 +20,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _estimateController = TextEditingController();
-  DateTime? _dueAt = _defaultDueAt(DateTime.now());
+  DateTime? _dueAt;
   DateTime? _targetAt;
   int _priority = 5;
   String _selectedIcon = TaskIconRegistry.defaultOption.name;
@@ -51,7 +51,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       initialDate: initial,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 5),
-      helpText: 'Select due date',
+      helpText: 'Select task due date',
     );
 
     if (picked != null) {
@@ -74,7 +74,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: base.hour, minute: base.minute),
-      helpText: 'Select due time',
+      helpText: 'Select task due time',
     );
     if (picked != null) {
       setState(() {
@@ -287,7 +287,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Labels',
+              'Tags(Important, Time Sensitive, etc)',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),

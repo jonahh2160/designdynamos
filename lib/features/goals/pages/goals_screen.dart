@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:designdynamos/core/models/goal.dart';
-import 'package:designdynamos/core/models/goal_step.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/models/goal_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
@@ -20,6 +19,8 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen> {
+  String? _deletingGoalId;
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +75,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   priority: priority,
                 );
               },
+          onDelete: selectedGoal == null
+              ? null
+              : () => _confirmDeleteGoal(context, selectedGoal),
+          isDeleting: _deletingGoalId == selectedGoal?.id,
         ),
       );
     }
@@ -144,15 +149,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
         onSubmit: (stepId, taskId) async {
           final step = selectedGoal.steps.firstWhere((s) => s.id == stepId);
           final task = unassigned.firstWhere((t) => t.id == taskId);
+          final navigator = Navigator.of(context);
           await goalProvider.assignTaskToStep(selectedGoal, step, task.id);
           await taskProvider.assignTaskToStep(task.id, step.id);
-          if (mounted) Navigator.of(ctx).pop();
+          if (!mounted) return;
+          navigator.pop();
         },
       ),
     );
   }
 
   Future<void> _openCreateGoalSheet(BuildContext context) async {
+    final provider = context.read<GoalProvider>();
     final draft = await showModalBottomSheet<GoalDraft>(
       context: context,
       isScrollControlled: true,
@@ -163,9 +171,56 @@ class _GoalsScreenState extends State<GoalsScreen> {
       builder: (ctx) => const _CreateGoalSheet(),
     );
     if (draft == null) return;
-    final provider = context.read<GoalProvider>();
     await provider.createGoal(draft);
     await provider.refresh();
+  }
+
+  Future<void> _confirmDeleteGoal(BuildContext context, Goal goal) async {
+    final goalProvider = context.read<GoalProvider>();
+    final taskProvider = context.read<TaskProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete goal?'),
+        content: const Text(
+          'This will remove the goal, its steps, and unlink any attached tasks. '
+          'Tasks will stay in your task list.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    setState(() => _deletingGoalId = goal.id);
+    try {
+      await goalProvider.deleteGoal(goal);
+      await taskProvider.refreshToday();
+      await goalProvider.refresh();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Goal "${goal.title}" deleted')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to delete goal: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingGoalId = null);
+      }
+    }
   }
 }
 
@@ -552,6 +607,7 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
     if (!mounted) return;
     Navigator.of(context).pop(draft);
   }
+
 }
 
 class _DatePickerField extends StatelessWidget {
