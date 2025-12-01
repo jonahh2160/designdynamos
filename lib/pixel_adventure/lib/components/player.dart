@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:ui_web';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/services.dart';
 import 'package:pixel_adventure/components/collision_block.dart';
-import 'package:pixel_adventure/components/util.dart';
+import 'package:pixel_adventure/components/player_hitbox.dart';
+import 'package:pixel_adventure/components/utils.dart';
 import 'package:pixel_adventure/pixel_adventure.dart';
 
 enum PlayerState {
@@ -28,21 +30,30 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   late final SpriteAnimation fallingAnimation;
 
   final double _gravity = 9.8;
-  final double _jumpForce = 430;
-  final double _terminalVelocity = 400; //if you are falling, there will come a time where you'll be free falling at the same speed
+  final double _jumpForce = 310;
+  final double _terminalVelocity = 300; //if you are falling, there will come a time where you'll be free falling at the same speed
 
   double horizontalMovement = 0;
-  double moveSpeed = 100;
+  double moveSpeed = 150;
   Vector2 velocity = Vector2.zero();// x is 0 and y is 0 initially
   bool isOnGround = false;
   bool hasJumped = false;
   List<CollisionBlock> collisionBlocks = [];
+  PlayerHitbox hitbox = PlayerHitbox(
+    offsetX: 10, 
+    offsetY: 4, 
+    width: 14, 
+    height: 28);
 
   @override
   FutureOr<void> onLoad() {
 
     _loadAllAnimations();
-    debugMode = true;
+    //debugMode = true;
+    add(RectangleHitbox(
+      position: Vector2(hitbox.offsetX, hitbox.offsetY),
+      size: Vector2(hitbox.width, hitbox.height),
+    ));
 
     return super.onLoad();
   }
@@ -124,7 +135,6 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
     }
 
     //check if moving, set running
-    
     if(velocity.x > 0 || velocity.x < 0) playerState = PlayerState.running;
 
 
@@ -149,12 +159,12 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
         if (checkCollision(this, block)){
           if(velocity.x > 0){//if we collide and we are going to the right
             velocity.x = 0;//stop moving
-            position.x = block.x - width;//stop when collide
+            position.x = block.x - hitbox.offsetX - hitbox.width;//stop when collide
             break;
           }
           if(velocity.x < 0){//if we collide and we are going to the right
             velocity.x = 0;//stop moving
-            position.x = block.x + block.width + width;//stop when collide front of the block
+            position.x = block.x + block.width + hitbox.width + hitbox.offsetX;//stop when collide front of the block
             break;
           }
         }
@@ -176,7 +186,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
         if(checkCollision(this, block)){
           if(velocity.y > 0){
             velocity.y = 0; //quicksand
-            position.y = block.y - height;//width?
+            position.y = block.y - hitbox.height - hitbox.offsetY;
             isOnGround = true;
             break;
           }
@@ -185,14 +195,13 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
         if(checkCollision(this, block)){
           if(velocity.y > 0){
             velocity.y = 0; //quicksand
-            position.y = block.y - height;//width?
+            position.y = block.y - hitbox.height - hitbox.offsetY;//width?
             isOnGround = true;
             break;
           }
           if(velocity.y < 0){
           velocity.y = 0;
-          position.y = block.y + height;
-          break;
+          position.y = block.y + block.height - hitbox.offsetY;
         }
         }
         

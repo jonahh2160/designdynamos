@@ -16,7 +16,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 467.5,
-                "y": 338
+                "y": 338.5
             }
         },
         "Level-02.tmx": {
@@ -24,11 +24,11 @@
                 3,
                 2
             ],
-            "scale": 1.5,
+            "scale": 0.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 301,
-                "y": 230
+                "x": 413,
+                "y": 245
             }
         },
         "Pixel Adventure.tsx": {
