@@ -28,8 +28,8 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   late final SpriteAnimation fallingAnimation;
 
   final double _gravity = 9.8;
-  final double _jumpForce = 260;
-  final double _terminalVelocity = 300; //if you are falling, there will come a time where you'll be free falling at the same speed
+  final double _jumpForce = 430;
+  final double _terminalVelocity = 400; //if you are falling, there will come a time where you'll be free falling at the same speed
 
   double horizontalMovement = 0;
   double moveSpeed = 100;
@@ -89,7 +89,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
     };
 
     //current animation
-    current = PlayerState.running;
+    current = PlayerState.idle;
   }
 
   SpriteAnimation _spriteAnimation(String animationState, int amount ){
