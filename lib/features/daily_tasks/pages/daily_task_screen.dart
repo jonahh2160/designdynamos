@@ -8,6 +8,7 @@ import 'package:designdynamos/core/widgets/action_chip_button.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/add_task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/add_task_dialog.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/finished_section_header.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
@@ -560,23 +561,48 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            for (final task in open)
-                              TaskCard(
-                                task: task,
-                                isSelected: task.id == selectedTaskId,
-                                onTap: () => p.selectTask(task.id),
-                                onToggle: () {
-                                  _toggleTaskCompletion(
-                                    p,
-                                    context.read<CoinProvider>(),
-                                    task,
-                                    !task.isDone,
-                                  );
-                                },
-                                subtaskDone: p.subtaskProgress(task.id).$1,
-                                subtaskTotal: p.subtaskProgress(task.id).$2,
-                                labels: p.labelsOf(task.id),
-                              ),
+                            ReorderableListView(
+                              physics:
+                                  const NeverScrollableScrollPhysics(), // disable inner scroll
+                              shrinkWrap: true, // shrink to fit children
+                              onReorder: (oldIndex, newIndex) async {
+                                if (newIndex > oldIndex) newIndex--;
+
+                                final moved = open.removeAt(oldIndex);
+                                open.insert(newIndex, moved);
+
+                                for (int i = 0; i < open.length; i++) {
+                                  open[i] = open[i].copyWith(orderHint: i);
+                                }
+
+                                for (final t in open) {
+                                  await context
+                                      .read<TaskProvider>()
+                                      .updateTaskOrder(t.id, t.orderHint);
+                                }
+                              },
+                              children: [
+                                for (final task in open)
+                                  TaskCard(
+                                    key: ValueKey(task.id),
+                                    task: task,
+                                    isSelected: task.id == selectedTaskId,
+                                    onTap: () => p.selectTask(task.id),
+                                    onToggle: () {
+                                      _toggleTaskCompletion(
+                                        p,
+                                        context.read<CoinProvider>(),
+                                        task,
+                                        !task.isDone,
+                                      );
+                                    },
+                                    subtaskDone: p.subtaskProgress(task.id).$1,
+                                    subtaskTotal:
+                                        p.subtaskProgress(task.id).$2,
+                                    labels: p.labelsOf(task.id),
+                                  ),
+                              ],
+                            ),
                             const SizedBox(height: 16),
 
 
