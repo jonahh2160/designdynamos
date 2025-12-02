@@ -11,23 +11,46 @@ import 'core/models/nav_item_data.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/data/services/supabase_service.dart';
 import 'providers/task_provider.dart';
+import 'providers/goal_provider.dart';
 import 'data/services/task_service.dart';
-
-
-
+import 'data/services/goal_service.dart';
+import 'data/services/goal_step_task_service.dart';
+import 'providers/coin_provider.dart';
+import 'data/services/coin_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.init(); //initialize Supabase
 
-  await SupabaseService.signInWithTestUser(); //for testing
+  //Attempt test sign-in; don't crash the app if credentials or URL are wrong.
+  try {
+    await SupabaseService.signInWithTestUser();
+  } catch (error, stack) {
+    debugPrint('Test sign-in failed: $error');
+    debugPrint('$stack');
+  }
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => TaskProvider(TaskService(SupabaseService.client))
-            ..refreshToday(),
+          create: (_) {
+            final provider = TaskProvider(TaskService(SupabaseService.client));
+            provider
+                .refreshToday()
+                .catchError((error) => debugPrint('refreshToday failed: $error'));
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) => GoalProvider(
+            GoalService(SupabaseService.client),
+            GoalStepTaskService(SupabaseService.client),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              CoinProvider(CoinService(SupabaseService.client))..refresh(),
         ),
       ],
       child: const MyApp(),
@@ -48,7 +71,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class SidebarButton extends StatelessWidget {
   const SidebarButton({
@@ -118,5 +140,3 @@ class SidebarButton extends StatelessWidget {
     );
   }
 }
-
-

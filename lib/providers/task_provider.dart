@@ -29,7 +29,9 @@ class TaskProvider extends ChangeNotifier {
   DateTime _day = DateTime.now();
   bool _includeOverdue = true;
   bool _includeSpanning = true;
-  bool _includeUndated = false;
+  bool _sortByEstimate = false;
+  List<TaskItem> get unassignedTasks =>
+      List.unmodifiable(_today.where((task) => task.goalStepId == null));
 
   bool get isLoading => _loading;
   bool get isCreating => _creating;
@@ -38,7 +40,7 @@ class TaskProvider extends ChangeNotifier {
   DateTime get day => _day;
   bool get includeOverdue => _includeOverdue;
   bool get includeSpanning => _includeSpanning;
-  bool get includeUndated => _includeUndated;
+  bool get sortByEstimate => _sortByEstimate;
   List<DbSubtask> subtasksOf(String taskId) =>
       List.unmodifiable(_subtasksByTask[taskId] ?? const []);
   (int done, int total) subtaskProgress(String taskId) {
@@ -63,12 +65,10 @@ class TaskProvider extends ChangeNotifier {
     DateTime? day,
     bool? includeOverdue,
     bool? includeSpanning,
-    bool? includeUndated,
   }) async {
     if (day != null) _day = DateTime(day.year, day.month, day.day);
     if (includeOverdue != null) _includeOverdue = includeOverdue;
     if (includeSpanning != null) _includeSpanning = includeSpanning;
-    if (includeUndated != null) _includeUndated = includeUndated;
 
     _loading = true;
     notifyListeners();
@@ -78,9 +78,9 @@ class TaskProvider extends ChangeNotifier {
         _day,
         includeOverdue: _includeOverdue,
         includeSpanning: _includeSpanning,
-        includeUndated: _includeUndated,
       );
       _today = tasks;
+      _sortToday();
 
       if (_today.isEmpty) {
         _selectedTaskId = null;
@@ -92,6 +92,10 @@ class TaskProvider extends ChangeNotifier {
       if (sel != null) {
         await _loadDetails(sel);
       }
+    } catch (error, stack) {
+      debugPrint('refreshDaily failed: $error');
+      debugPrint('$stack');
+      rethrow;
     } finally {
       _loading = false;
       notifyListeners();
@@ -123,6 +127,13 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> refreshToday() => refreshDaily(day: DateTime.now());
 
+  void setSortByEstimate(bool enabled) {
+    if (_sortByEstimate == enabled) return;
+    _sortByEstimate = enabled;
+    _sortToday();
+    notifyListeners();
+  }
+
   void selectTask(String? id) {
     if (_selectedTaskId == id) return;
     _selectedTaskId = id;
@@ -143,11 +154,13 @@ class TaskProvider extends ChangeNotifier {
     final now = DateTime.now();
     final fallbackStart = draft.startAt ?? now;
     final fallbackDue = draft.dueAt ?? _defaultDueAt(fallbackStart);
+    final fallbackTarget = draft.targetAt ?? fallbackDue;
     final tempTask = draft.toTask(
       id: tempId,
       orderHint: nextOrderHint,
       fallbackStartAt: fallbackStart,
       fallbackDueAt: fallbackDue,
+      fallbackTargetAt: fallbackTarget,
     );
 
     _creating = true;
@@ -239,8 +252,16 @@ class TaskProvider extends ChangeNotifier {
     Duration? dueTime,
     DateTime? dueAt,
     bool clearDueAt = false,
+    DateTime? targetDatePart,
+    Duration? targetTime,
+    DateTime? targetAt,
+    bool clearTargetAt = false,
+    String? goalStepId,
+    bool clearGoalStep = false,
     int? priority,
     String? iconName,
+    int? estimatedMinutes,
+    bool clearEstimatedMinutes = false,
   }) async {
     final index = _today.indexWhere((task) => task.id == id);
     if (index < 0) return;
@@ -253,7 +274,19 @@ class TaskProvider extends ChangeNotifier {
     }
 
     if (priority != null) {
-      updated = updated.copyWith(priority: priority);
+      updated = updated.copyWith(
+        priority: priority,
+        points: priority * 2, //keep points in sync locally with priority
+      );
+    }
+
+    int? nextEstimatedMinutes = before.estimatedMinutes;
+    if (clearEstimatedMinutes) {
+      nextEstimatedMinutes = null;
+      updated = updated.copyWith(clearEstimatedMinutes: true);
+    } else if (estimatedMinutes != null) {
+      nextEstimatedMinutes = estimatedMinutes;
+      updated = updated.copyWith(estimatedMinutes: estimatedMinutes);
     }
 
     DateTime? nextDueAt = before.dueAt;
@@ -271,6 +304,29 @@ class TaskProvider extends ChangeNotifier {
       updated = updated.copyWith(dueAt: nextDueAt);
     }
 
+    DateTime? nextTargetAt = before.targetAt;
+    if (clearTargetAt) {
+      nextTargetAt = null;
+      updated = updated.copyWith(clearTargetAt: true);
+    } else if (targetAt != null ||
+        targetDatePart != null ||
+        targetTime != null) {
+      nextTargetAt =
+          targetAt ??
+          _composeDueAt(
+            date: targetDatePart,
+            time: targetTime,
+            existing: before.targetAt,
+          );
+      updated = updated.copyWith(targetAt: nextTargetAt);
+    }
+
+    if (clearGoalStep) {
+      updated = updated.copyWith(clearGoalStep: true);
+    } else if (goalStepId != null) {
+      updated = updated.copyWith(goalStepId: goalStepId);
+    }
+
     _today[index] = updated;
     final allIndex = _allTasks.indexWhere((t) => t.id == id);
     if (allIndex != -1) _allTasks[allIndex] = updated;
@@ -280,14 +336,28 @@ class TaskProvider extends ChangeNotifier {
     final dueAtForUpdate = clearDueAt
         ? null
         : (nextDueAt != before.dueAt ? nextDueAt : null);
+    final targetAtForUpdate = clearTargetAt
+        ? null
+        : (nextTargetAt != before.targetAt ? nextTargetAt : null);
+    final estimateForUpdate = clearEstimatedMinutes
+        ? null
+        : (nextEstimatedMinutes != before.estimatedMinutes
+            ? nextEstimatedMinutes
+            : null);
 
     try {
       await _service.updateTask(
         id,
         dueAt: dueAtForUpdate,
         clearDueAt: clearDueAt,
+        targetAt: targetAtForUpdate,
+        clearTargetAt: clearTargetAt,
+        goalStepId: goalStepId,
+        clearGoalStep: clearGoalStep,
         priority: priority,
         iconName: iconName,
+        estimatedMinutes: estimateForUpdate,
+        clearEstimatedMinutes: clearEstimatedMinutes,
       );
     } catch (error) {
       _today[index] = before;
@@ -435,15 +505,31 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> assignTaskToStep(String taskId, String? goalStepId) async {
+    final index = _today.indexWhere((task) => task.id == taskId);
+    if (index < 0) return;
+    final before = _today[index];
+    final updated = before.copyWith(
+      goalStepId: goalStepId,
+      clearGoalStep: goalStepId == null,
+    );
+    _today[index] = updated;
+    notifyListeners();
+    try {
+      await _service.setGoalStep(taskId, goalStepId: goalStepId);
+    } catch (error) {
+      _today[index] = before;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   void _sortToday() {
-    print('🧩 sortToday() called');
+    //ensure list is growable before sorting (avoid const list sort errors)
+    _today = List<TaskItem>.from(_today);
     _today.sort((a, b) {
       if (a.isDone != b.isDone) {
         return a.isDone ? 1 : -1;
-      }
-      final priorityComparison = b.priority.compareTo(a.priority);
-      if (priorityComparison != 0) {
-        return priorityComparison;
       }
       final dueA = a.dueAt;
       final dueB = b.dueAt;
@@ -454,6 +540,30 @@ class TaskProvider extends ChangeNotifier {
         return 1;
       } else if (dueA != null && dueB == null) {
         return -1;
+      }
+      if (_sortByEstimate) {
+        final estA = a.estimatedMinutes;
+        final estB = b.estimatedMinutes;
+        if (estA != null || estB != null) {
+          if (estA == null) return 1;
+          if (estB == null) return -1;
+          final estimateComparison = estB.compareTo(estA);
+          if (estimateComparison != 0) return estimateComparison;
+        }
+      }
+      final targetA = a.targetAt;
+      final targetB = b.targetAt;
+      if (targetA != null && targetB != null) {
+        final targetComparison = targetA.compareTo(targetB);
+        if (targetComparison != 0) return targetComparison;
+      } else if (targetA == null && targetB != null) {
+        return 1;
+      } else if (targetA != null && targetB == null) {
+        return -1;
+      }
+      final priorityComparison = b.priority.compareTo(a.priority);
+      if (priorityComparison != 0) {
+        return priorityComparison;
       }
       return a.orderHint.compareTo(b.orderHint);
     });

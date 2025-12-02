@@ -3,9 +3,6 @@ import 'package:table_calendar/table_calendar.dart';
 
 import 'package:designdynamos/core/theme/app_colors.dart';
 
-
-
-
 class CustomCalendar extends StatefulWidget {
   final void Function(DateTime selectedDay)? onDaySelectedCallback;
 
@@ -28,16 +25,9 @@ class _CustomCalendarState extends State<CustomCalendar> {
         color: AppColors.subtaskBackground,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(2, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(2, 2)),
         ],
-        border: Border.all(
-          color: AppColors.textMuted,
-          width: 1.5
-        ),
+        border: Border.all(color: AppColors.textMuted, width: 1.5),
       ),
       child: TableCalendar(
         focusedDay: _focusedDay,
@@ -58,19 +48,15 @@ class _CustomCalendarState extends State<CustomCalendar> {
         headerStyle: const HeaderStyle(
           titleCentered: true,
           formatButtonVisible: false,
-          titleTextStyle: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-          headerPadding: EdgeInsets.only(bottom: 16), 
+          titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          headerPadding: EdgeInsets.only(bottom: 16),
         ),
 
         daysOfWeekStyle: const DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: AppColors.textPrimary),
-            weekendStyle: TextStyle(color: AppColors.textPrimary),
+          weekdayStyle: TextStyle(color: AppColors.textPrimary),
+          weekendStyle: TextStyle(color: AppColors.textPrimary),
         ),
 
-        
         calendarStyle: CalendarStyle(
           tablePadding: const EdgeInsets.only(top: 15),
           outsideDaysVisible: false,
@@ -79,33 +65,33 @@ class _CustomCalendarState extends State<CustomCalendar> {
           weekendTextStyle: const TextStyle(color: AppColors.textPrimary),
           cellPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
 
-        defaultDecoration: BoxDecoration(
-          shape: BoxShape.rectangle,
-          color: AppColors.subtaskBackground ,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.textSecondary, width: 1),
-        ),
+          defaultDecoration: BoxDecoration(
+            shape: BoxShape.rectangle,
+            color: AppColors.subtaskBackground,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.textSecondary, width: 1),
+          ),
 
-         weekendDecoration: BoxDecoration(
-          shape: BoxShape.rectangle,
-          color: AppColors.subtaskBackground,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.textSecondary , width: 1),
+          weekendDecoration: BoxDecoration(
+            shape: BoxShape.rectangle,
+            color: AppColors.subtaskBackground,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.textSecondary, width: 1),
+          ),
+          todayDecoration: BoxDecoration(
+            shape: BoxShape.rectangle,
+            color: (AppColors.taskCardHighlight).withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.transparent),
+          ),
+          selectedDecoration: BoxDecoration(
+            shape: BoxShape.rectangle,
+            color: AppColors.taskCard,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.transparent),
+          ),
+          cellAlignment: Alignment.topLeft,
         ),
-        todayDecoration: BoxDecoration(
-          shape: BoxShape.rectangle,
-          color: (AppColors.taskCardHighlight ).withOpacity(0.3),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.transparent),
-        ),
-        selectedDecoration: BoxDecoration(
-          shape: BoxShape.rectangle,
-          color: AppColors.taskCard,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.transparent),
-        ),
-        cellAlignment: Alignment.topLeft,
-      ),
       ),
     );
   }

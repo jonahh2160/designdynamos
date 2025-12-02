@@ -2,7 +2,6 @@ import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import "package:flutter/material.dart";
 import 'package:intl/intl.dart';
 
-
 import 'package:designdynamos/ui/widgets/large_box.dart';
 import 'package:designdynamos/providers/task_provider.dart';
 import 'package:designdynamos/core/models/task_draft.dart';
@@ -36,8 +35,10 @@ class _OutlookScreenState extends State<OutlookScreen> {
     final tasks = context.watch<TaskProvider>().allTasks;
 
     final DateTime today = DateTime.now();
-    final List<DateTime> days =
-        List.generate(14, (index) => today.add(Duration(days: index)));
+    final List<DateTime> days = List.generate(
+      14,
+      (index) => today.add(Duration(days: index)),
+    );
 
     return Scaffold(
       body: Padding(
@@ -49,9 +50,9 @@ class _OutlookScreenState extends State<OutlookScreen> {
             Text(
               "Outlook",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
+                fontWeight: FontWeight.bold,
+                fontSize: 30,
+              ),
             ),
             const SizedBox(height: 40),
             Center(

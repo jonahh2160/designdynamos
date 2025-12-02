@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:designdynamos/core/models/task_draft.dart';
+import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/core/widgets/action_chip_button.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/add_task_card.dart';
@@ -10,13 +12,11 @@ import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:provider/provider.dart';
-import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
-
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:designdynamos/providers/coin_provider.dart';
 
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
@@ -35,7 +35,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     DateTime day = p.day;
     bool includeOverdue = p.includeOverdue;
     bool includeSpanning = p.includeSpanning;
-    bool includeUndated = p.includeUndated;
+    bool sortByEstimate = p.sortByEstimate;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -62,7 +62,6 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                             day = DateTime.now();
                             includeOverdue = true;
                             includeSpanning = true;
-                            includeUndated = false;
                           });
                         },
                         child: const Text('Reset'),
@@ -98,16 +97,16 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Include spanning window'),
                     subtitle: const Text(
-                      'Show tasks where day falls within start → due',
+                      'Show tasks where the day falls between start and due',
                     ),
                     value: includeSpanning,
                     onChanged: (v) => setState(() => includeSpanning = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Include undated backlog'),
-                    value: includeUndated,
-                    onChanged: (v) => setState(() => includeUndated = v),
+                    title: const Text('Sort by longest estimate first'),
+                    value: sortByEstimate,
+                    onChanged: (v) => setState(() => sortByEstimate = v),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -120,13 +119,25 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () async {
+                          final taskProvider = context.read<TaskProvider>();
+                          final messenger = ScaffoldMessenger.of(context);
                           Navigator.of(context).pop();
-                          await context.read<TaskProvider>().refreshDaily(
-                            day: day,
-                            includeOverdue: includeOverdue,
-                            includeSpanning: includeSpanning,
-                            includeUndated: includeUndated,
-                          );
+                          try {
+                            await taskProvider.refreshDaily(
+                                  day: day,
+                                  includeOverdue: includeOverdue,
+                                  includeSpanning: includeSpanning,
+                                );
+                            taskProvider.setSortByEstimate(sortByEstimate);
+                          } catch (error) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Failed to apply filters: $error',
+                                ),
+                              ),
+                            );
+                          }
                         },
                         child: const Text('Apply'),
                       ),
@@ -148,18 +159,44 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null) {
-        final provider = context.read<TaskProvider>();
-        await provider.refreshToday();
-        await provider.refreshAllTasks(); // <-- ensure _allTasks is loaded
+        context
+            .read<TaskProvider>()
+            .refreshToday()
+            .catchError((error) => debugPrint('refreshToday failed: $error'));
+        context.read<CoinProvider>().refresh();
       }
     });
 
     //ensuring we refresh once auth session is available (e.g., after app start) and refetch when auth state changes
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      if (mounted && event.session != null) {
-        context.read<TaskProvider>().refreshToday();
+      if (!mounted) return;
+      if (event.session != null) {
+        context
+            .read<TaskProvider>()
+            .refreshToday()
+            .catchError((error) => debugPrint('refreshToday failed: $error'));
+        context.read<CoinProvider>().refresh();
+      } else {
+        context.read<CoinProvider>().reset();
       }
     });
+  }
+
+  Future<void> _toggleTaskCompletion(
+    TaskProvider provider,
+    CoinProvider coinProvider,
+    TaskItem task,
+    bool done,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await provider.toggleDone(task.id, done);
+      await coinProvider.refresh();
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to update task: $error')),
+      );
+    }
   }
 
   Future<void> _handleAddTask() async {
@@ -196,6 +233,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<TaskProvider>();
+    final coins = context.watch<CoinProvider>();
     if (p.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -235,13 +273,57 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       onToggleComplete: (done) async {
                         final task = p.selectedTask;
                         if (task == null) return;
+                        await _toggleTaskCompletion(
+                          p,
+                          context.read<CoinProvider>(),
+                          task,
+                          done,
+                        );
+                      },
+                      onTargetAtChange: (date) async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          await p.toggleDone(task.id, done);
+                          await p.updateTask(task.id, targetDatePart: date);
                         } catch (error) {
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('Failed to update task: $error'),
+                              content: Text(
+                                'Failed to update target date: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onTargetTimeChange: (timeOfDay) async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(task.id, targetTime: timeOfDay);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to update target time: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onClearTargetAt: () async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(task.id, clearTargetAt: true);
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to clear target date: $error',
+                              ),
                             ),
                           );
                         }
@@ -278,16 +360,41 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           );
                         }
                       },
-                      onClearDueAt: () async {
+                      onEstimateChange: (minutes) async {
                         final task = p.selectedTask;
                         if (task == null) return;
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          await p.updateTask(task.id, clearDueAt: true);
+                          await p.updateTask(
+                            task.id,
+                            estimatedMinutes: minutes,
+                            clearEstimatedMinutes: minutes == null,
+                          );
                         } catch (error) {
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('Failed to clear due date: $error'),
+                              content: Text(
+                                'Failed to update estimate: $error',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      onClearEstimate: () async {
+                        final task = p.selectedTask;
+                        if (task == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await p.updateTask(
+                            task.id,
+                            clearEstimatedMinutes: true,
+                          );
+                        } catch (error) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to clear estimate: $error',
+                              ),
                             ),
                           );
                         }
@@ -355,7 +462,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       onClose: () => p.selectTask(null),
                     );
 
-              final panelWidth = constraints.maxWidth >= 1400 ? 360.0 : 320.0;
+              final availableWidth = constraints.maxWidth;
+              final panelWidth = math.max(
+                280.0,
+                math.min(availableWidth * 0.34, 380.0),
+              );
               final availableHeight = MediaQuery.of(context).size.height;
               final compactPanelHeight = math.min(availableHeight * 0.6, 560.0);
 
@@ -368,7 +479,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     ProgressOverview(
                       completed: finished.length,
                       total: p.today.length,
-                      coins: 600, //TODO: read from profile provider
+                      coins: coins.totalCoins,
                       streakLabel:
                           '${finished.length}/${p.today.length} tasks completed',
                     ),
@@ -388,6 +499,12 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                         const ActionChipButton(
                           icon: Icons.auto_awesome,
                           label: 'Suggestions',
+                        ),
+                        const SizedBox(width: 12),
+                        ActionChipButton(
+                          icon: Icons.add,
+                          label: 'Add task',
+                          onTap: _handleAddTask,
                         ),
                         const SizedBox(width: 12),
                         ActionChipButton(
@@ -443,42 +560,23 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            //Change to a reorderable list
-                            ReorderableListView(
-                              physics: const NeverScrollableScrollPhysics(), // disable inner scroll
-                              shrinkWrap: true, // shrink to fit children
-                              onReorder: (oldIndex, newIndex) async {
-                                if (newIndex > oldIndex) newIndex--;
-
-                                final moved = open.removeAt(oldIndex);
-                                open.insert(newIndex, moved);
-
-                                for (int i = 0; i < open.length; i++) {
-                                  open[i] = open[i].copyWith(orderHint: i);
-                                } 
-
-                                for (final t in open) {
-                                  await context.read<TaskProvider>().updateTaskOrder(t.id, t.orderHint);
-                                }
-                              },
-                              children: [
-                                for (final task in open)
-                                  TaskCard(
-                                    key: ValueKey(task.id),
-                                    task: task,
-                                    isSelected: task.id == selectedTaskId,
-                                    onTap: () => p.selectTask(task.id),
-                                    onToggle: () => context
-                                      .read<TaskProvider>()
-                                      .toggleDone(task.id, !task.isDone),
-                                    subtaskDone: p.subtaskProgress(task.id).$1,
-                                    subtaskTotal: p.subtaskProgress(task.id).$2,
-                                    labels: p.labelsOf(task.id),
-                                  ),
-                              ],
-                            ),
-
-
+                            for (final task in open)
+                              TaskCard(
+                                task: task,
+                                isSelected: task.id == selectedTaskId,
+                                onTap: () => p.selectTask(task.id),
+                                onToggle: () {
+                                  _toggleTaskCompletion(
+                                    p,
+                                    context.read<CoinProvider>(),
+                                    task,
+                                    !task.isDone,
+                                  );
+                                },
+                                subtaskDone: p.subtaskProgress(task.id).$1,
+                                subtaskTotal: p.subtaskProgress(task.id).$2,
+                                labels: p.labelsOf(task.id),
+                              ),
                             const SizedBox(height: 16),
 
 
@@ -491,9 +589,14 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 task: task,
                                 isSelected: task.id == selectedTaskId,
                                 onTap: () => p.selectTask(task.id),
-                                onToggle: () => context
-                                    .read<TaskProvider>()
-                                    .toggleDone(task.id, !task.isDone),
+                                onToggle: () {
+                                  _toggleTaskCompletion(
+                                    p,
+                                    context.read<CoinProvider>(),
+                                    task,
+                                    !task.isDone,
+                                  );
+                                },
                                 subtaskDone: p.subtaskProgress(task.id).$1,
                                 subtaskTotal: p.subtaskProgress(task.id).$2,
                                 labels: p.labelsOf(task.id),

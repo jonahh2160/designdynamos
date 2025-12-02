@@ -9,10 +9,9 @@ class Subtitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: Theme.of(context)
-          .textTheme
-          .titleLarge!
-          .copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(
+        context,
+      ).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold),
     );
   }
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart';
 import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
@@ -17,10 +19,13 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  DateTime? _dueAt = _defaultDueAt(DateTime.now());
+  final TextEditingController _estimateController = TextEditingController();
+  DateTime? _dueAt;
+  DateTime? _targetAt;
   int _priority = 5;
   String _selectedIcon = TaskIconRegistry.defaultOption.name;
   String? _errorText;
+  String? _estimateErrorText;
   final List<TextEditingController> _subtaskControllers = [];
   final TextEditingController _labelInputController = TextEditingController();
   final Set<String> _labels = <String>{};
@@ -29,6 +34,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _estimateController.dispose();
     for (final c in _subtaskControllers) {
       c.dispose();
     }
@@ -45,7 +51,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       initialDate: initial,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 5),
-      helpText: 'Select due date',
+      helpText: 'Select task due date',
     );
 
     if (picked != null) {
@@ -68,7 +74,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: base.hour, minute: base.minute),
-      helpText: 'Select due time',
+      helpText: 'Select task due time',
     );
     if (picked != null) {
       setState(() {
@@ -84,12 +90,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     }
   }
 
-  void _clearDueAt() {
-    setState(() {
-      _dueAt = null;
-    });
-  }
-
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
@@ -97,6 +97,17 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         _errorText = 'Please enter a task title';
       });
       return;
+    }
+
+    final rawEstimate = _estimateController.text.trim();
+    final parsedEstimate = parseEstimateMinutes(rawEstimate);
+    if (rawEstimate.isNotEmpty && parsedEstimate == null) {
+      setState(() {
+        _estimateErrorText = 'Use minutes or H:MM (e.g., 45 or 1:30)';
+      });
+      return;
+    } else {
+      _estimateErrorText = null;
     }
 
     final subtasks = _subtaskControllers
@@ -110,7 +121,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         title: title,
         iconName: _selectedIcon,
         dueAt: _dueAt ?? _defaultDueAt(DateTime.now()),
+        targetAt: _targetAt,
         priority: _priority,
+        estimatedMinutes: parsedEstimate,
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -168,15 +181,103 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     ),
                   ),
                 ),
-                if (_dueAt != null) ...[
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final initial = (_targetAt ?? _dueAt ?? now).toLocal();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initial,
+                        firstDate: DateTime(now.year - 1),
+                        lastDate: DateTime(now.year + 5),
+                        helpText: 'Select target date',
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          final current = _targetAt ?? _dueAt ?? now;
+                          _targetAt = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            current.hour,
+                            current.minute,
+                          );
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.flag_outlined),
+                    label: Text(
+                      _targetAt != null
+                          ? _formattedDate(_targetAt!)
+                          : 'Add target date',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final base = (_targetAt ?? _dueAt ?? now).toLocal();
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(
+                          hour: base.hour,
+                          minute: base.minute,
+                        ),
+                        helpText: 'Select target time',
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          final currentDate = _targetAt ?? _dueAt ?? now;
+                          _targetAt = DateTime(
+                            currentDate.year,
+                            currentDate.month,
+                            currentDate.day,
+                            picked.hour,
+                            picked.minute,
+                          );
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.access_alarm_outlined),
+                    label: Text(
+                      _targetAt != null
+                          ? _formattedTime(_targetAt!)
+                          : 'Add target time',
+                    ),
+                  ),
+                ),
+                if (_targetAt != null) ...[
                   const SizedBox(width: 12),
                   IconButton(
-                    tooltip: 'Clear due date',
-                    onPressed: _clearDueAt,
+                    tooltip: 'Clear target date',
+                    onPressed: () => setState(() => _targetAt = null),
                     icon: const Icon(Icons.close),
                   ),
                 ],
               ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _estimateController,
+              keyboardType: const TextInputType.numberWithOptions(
+                signed: false,
+                decimal: false,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+              ],
+              decoration: InputDecoration(
+                hintText: 'Estimate (minutes or H:MM)',
+                errorText: _estimateErrorText,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -186,7 +287,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Labels',
+              'Tags(Important, Time Sensitive, etc)',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),

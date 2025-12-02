@@ -5,11 +5,7 @@ class Headline extends StatelessWidget {
   final String title;
   final String? caption;
 
-  const Headline({
-    super.key,
-    required this.title,
-    this.caption,
-  });
+  const Headline({super.key, required this.title, this.caption});
 
   @override
   Widget build(BuildContext context) {
@@ -22,18 +18,17 @@ class Headline extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall!
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.bold),
             ),
             caption != null
                 ? Text(
                     caption!,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyLarge!
-                        .copyWith(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   )
                 : const SizedBox.shrink(),
           ],
@@ -45,10 +40,9 @@ class Headline extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium!
-                      .copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -57,19 +51,17 @@ class Headline extends StatelessWidget {
                 ),
                 Text(
                   caption!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge!
-                      .copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             )
           : Text(
               title,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium!
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.bold),
             );
     }
   }

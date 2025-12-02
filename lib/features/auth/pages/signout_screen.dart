@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 
-
 class SignOutScreen extends StatelessWidget {
   const SignOutScreen({super.key});
   @override

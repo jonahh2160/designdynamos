@@ -145,7 +145,14 @@ class _DashboardPageState extends State<DashboardPage> {
                               //When navigating back to Daily Tasks, refresh from server
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (mounted) {
-                                  context.read<TaskProvider>().refreshToday();
+                                  context
+                                      .read<TaskProvider>()
+                                      .refreshToday()
+                                      .catchError(
+                                        (error) => debugPrint(
+                                          'refreshToday failed: $error',
+                                        ),
+                                      );
                                 }
                               });
                             }

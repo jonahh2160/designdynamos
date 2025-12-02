@@ -17,11 +17,7 @@ class _TabletScaffoldState extends State<TabletScaffold> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Rail(),
-          Expanded(
-            child: Stack(
-              children: [widget.content],
-            ),
-          ),
+          Expanded(child: Stack(children: [widget.content])),
         ],
       ),
     );

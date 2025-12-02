@@ -3,7 +3,6 @@ import 'package:designdynamos/core/models/nav_item_data.dart';
 import 'sidebar_button.dart';
 import 'package:flutter/material.dart';
 
-
 class Sidebar extends StatelessWidget {
   const Sidebar({
     super.key,

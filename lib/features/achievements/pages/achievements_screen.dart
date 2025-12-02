@@ -18,9 +18,9 @@ class AchievementsScreen extends StatelessWidget {
             Text(
               "Achievements",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
+                fontWeight: FontWeight.bold,
+                fontSize: 30,
+              ),
             ),
 
             const SizedBox(height: 40),
@@ -36,10 +36,7 @@ class AchievementsScreen extends StatelessWidget {
                     label: "Coin Leaderboard",
                     child: Text(
                       "Leaderboard Coming Soon",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                   ),
                   SizedBox(width: 16),
@@ -47,10 +44,7 @@ class AchievementsScreen extends StatelessWidget {
                     label: "Your Badges",
                     child: Text(
                       "Badges Coming Soon",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                   ),
                   const SizedBox(width: 30),
@@ -60,24 +54,21 @@ class AchievementsScreen extends StatelessWidget {
                     children: [
                       Text(
                         "Streaks",
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                            ),
                       ),
                       const SizedBox(height: 16),
                     ],
-        ),
+                  ),
                 ],
-              
               ),
             ),
-
-            
-    ]
-  ),
-    )
+          ],
+        ),
+      ),
     );
   }
 }
-

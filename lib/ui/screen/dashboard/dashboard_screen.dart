@@ -20,10 +20,7 @@ class DailyTaskScreen extends GetResponsiveView<DashboardController> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Headline(
-              title: "Daily Tasks",
-              caption: "Welcome to Tasqly",
-            ),
+            const Headline(title: "Daily Tasks", caption: "Welcome to Tasqly"),
             const SizedBox(height: 32),
             SizedBox(
               height: 214,
@@ -37,8 +34,7 @@ class DailyTaskScreen extends GetResponsiveView<DashboardController> {
                 itemBuilder: (context, index) => const CardAnnounceMedium(
                   iconData: Icons.stars,
                   title: "Information",
-                  subtitle:
-                      "Template",
+                  subtitle: "Template",
                 ),
               ),
             ),

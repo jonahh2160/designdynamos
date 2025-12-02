@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 
 class LargeBox extends StatelessWidget {
-  final String label;       //Title text (can be a date or anything)
-  final Widget? child;      //Optional child content
+  final String label; //Title text (can be a date or anything)
+  final Widget? child; //Optional child content
 
-  const LargeBox({
-    super.key,
-    required this.label,
-    this.child,
-  });
+  const LargeBox({super.key, required this.label, this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -20,16 +16,9 @@ class LargeBox extends StatelessWidget {
         color: AppColors.subtaskBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: Offset(2, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(2, 2)),
         ],
-        border: Border.all(
-          color: AppColors.textMuted,
-          width: 1.5,
-        ),
+        border: Border.all(color: AppColors.textMuted, width: 1.5),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,

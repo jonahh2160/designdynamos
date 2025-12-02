@@ -5,8 +5,12 @@ class CardAnnounceMedium extends StatelessWidget {
   final String? subtitle;
   final IconData? iconData;
 
-  const CardAnnounceMedium(
-      {super.key, required this.title, this.subtitle, this.iconData});
+  const CardAnnounceMedium({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.iconData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,8 +22,9 @@ class CardAnnounceMedium extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(32),
-        visualDensity:
-            const VisualDensity(vertical: VisualDensity.maximumDensity),
+        visualDensity: const VisualDensity(
+          vertical: VisualDensity.maximumDensity,
+        ),
         leading: iconData != null
             ? Icon(
                 Icons.dynamic_form,
@@ -29,18 +34,18 @@ class CardAnnounceMedium extends StatelessWidget {
             : null,
         title: Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall!
-              .copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+          style: Theme.of(context).textTheme.headlineSmall!.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         subtitle: subtitle != null
             ? Text(
                 subtitle!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyLarge!
-                    .copyWith(color: Colors.grey, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
               )
             : null,
       ),

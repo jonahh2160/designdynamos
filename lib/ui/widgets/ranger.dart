@@ -4,11 +4,7 @@ class Ranger extends StatelessWidget {
   final String from;
   final String to;
 
-  const Ranger({
-    super.key,
-    required this.from,
-    required this.to,
-  });
+  const Ranger({super.key, required this.from, required this.to});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +14,9 @@ class Ranger extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           "$from - $to",
-          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
