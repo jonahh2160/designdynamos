@@ -26,6 +26,8 @@ class DashboardPage extends StatefulWidget {
 //state
 class _DashboardPageState extends State<DashboardPage> {
   var selectedIndex = 0;
+  bool isSidebarOpen = true;
+
   @override
   Widget build(BuildContext context) {
     final mainDest = DashboardConstants.mainDestinations;
@@ -72,7 +74,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isCompact = constraints.maxWidth < 1100;
-        final bool showLabels = !isCompact;
+        final bool showLabels = !isCompact && isSidebarOpen;
 
         return Scaffold(
           body: Row(
@@ -93,6 +95,24 @@ class _DashboardPageState extends State<DashboardPage> {
                         ? CrossAxisAlignment.start
                         : CrossAxisAlignment.center,
                     children: [
+                      Align(
+                        alignment: showLabels
+                            ? Alignment.centerRight
+                            : Alignment.center,
+                        child: IconButton(
+                          icon: Icon(
+                            isSidebarOpen
+                                ? Icons.arrow_back_ios
+                                : Icons.arrow_forward_ios,
+                            color: AppColors.textMuted,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isSidebarOpen = !isSidebarOpen;
+                            });
+                          },
+                        ),
+                      ),
                       Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: showLabels ? 24 : 0,
@@ -106,11 +126,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                       color: AppColors.textMuted,
                                     ),
                               )
-                            : Icon(
-                                Icons.add_task,
-                                size: 32,
-                                color: AppColors.textMuted,
-                              ),
+                            : SizedBox.shrink(), //Icon(
+                            //     Icons.add_task,
+                            //     size: 32,
+                            //     color: AppColors.textMuted,
+                            //   ),
                       ),
                       SizedBox(height: showLabels ? 32 : 24),
                       //Primary nav items

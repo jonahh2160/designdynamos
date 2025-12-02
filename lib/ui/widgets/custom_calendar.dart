@@ -4,7 +4,9 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 
 class CustomCalendar extends StatefulWidget {
-  const CustomCalendar({super.key});
+  final void Function(DateTime selectedDay)? onDaySelectedCallback;
+
+  const CustomCalendar({super.key, this.onDaySelectedCallback});
 
   @override
   State<CustomCalendar> createState() => _CustomCalendarState();
@@ -17,8 +19,6 @@ class _CustomCalendarState extends State<CustomCalendar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 650,
-      width: 450,
       margin: const EdgeInsets.only(top: 24, left: 16, right: 16, bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       decoration: BoxDecoration(
@@ -33,13 +33,16 @@ class _CustomCalendarState extends State<CustomCalendar> {
         focusedDay: _focusedDay,
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
-        rowHeight: 85,
+        rowHeight: 111,
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
             _selectedDay = selectedDay;
             _focusedDay = focusedDay;
           });
+          if (widget.onDaySelectedCallback != null) {
+            widget.onDaySelectedCallback!(selectedDay);
+          }
         },
 
         headerStyle: const HeaderStyle(
