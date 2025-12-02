@@ -1,6 +1,7 @@
 import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
@@ -80,6 +81,7 @@ class TaskCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                if (onToggle != null)
                 GestureDetector(
                   onTap: onToggle,
                   behavior: HitTestBehavior.translucent,
@@ -173,11 +175,11 @@ class _MetadataRow extends StatelessWidget {
         ),
       );
     }
-    if (task.dueDate != null) {
+    if (task.dueAt != null) {
       chips.add(
         MetaChip(
           icon: Icons.calendar_today_outlined,
-          label: _formatDueDate(task.dueDate!),
+          label: _formatDueDate(task.dueAt!),
         ),
       );
     }
@@ -196,14 +198,16 @@ class _MetadataRow extends StatelessWidget {
   }
 }
 
-String _formatDueDate(DateTime date) {
+String _formatDueDate(DateTime dateTime) {
+  final local = dateTime.toLocal();
   final today = DateUtils.dateOnly(DateTime.now());
-  final target = DateUtils.dateOnly(date);
+  final target = DateUtils.dateOnly(local);
   final diff = target.difference(today).inDays;
+  final timeLabel = DateFormat.jm().format(local);
 
-  if (diff == 0) return 'Due Today';
-  if (diff == 1) return 'Due Tomorrow';
-  if (diff == -1) return 'Due Yesterday';
+  if (diff == 0) return 'Due Today • $timeLabel';
+  if (diff == 1) return 'Due Tomorrow • $timeLabel';
+  if (diff == -1) return 'Due Yesterday • $timeLabel';
 
   const months = [
     'Jan',
@@ -220,5 +224,5 @@ String _formatDueDate(DateTime date) {
     'Dec',
   ];
   final month = months[target.month - 1];
-  return '$month ${target.day}';
+  return '$month ${target.day} • $timeLabel';
 }

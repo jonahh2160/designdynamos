@@ -2,57 +2,70 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:designdynamos/constant/data/main_menu_data.dart';
 
-class Rail extends StatefulWidget {
+class Rail extends StatelessWidget {
   const Rail({super.key});
 
   @override
-  State<Rail> createState() => _RailState();
-}
-
-class _RailState extends State<Rail> {
-  @override
   Widget build(BuildContext context) {
+    final route = ModalRoute.of(context);
     var selectedIndex = 0;
-    var route = ModalRoute.of(context);
-    List<NavigationRailDestination> listRails = [];
+
+    final destinations = <NavigationRailDestination>[];
     for (var i = 0; i < listMainMenu.length; i++) {
-      var element = listMainMenu[i];
-      if (route!.settings.name == element.route) {
+      final menu = listMainMenu[i];
+      if (route?.settings.name == menu.route) {
         selectedIndex = i;
       }
-      listRails.add(NavigationRailDestination(
-        label: Text(element.name),
-        icon: Icon(element.icon),
-        selectedIcon: Icon(
-          element.icon,
-          color: Colors.indigoAccent,
+      destinations.add(
+        NavigationRailDestination(
+          label: Text(menu.name),
+          icon: Icon(menu.icon),
+          selectedIcon: Icon(
+            menu.icon,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
-      ));
+      );
     }
+
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isExtended = screenWidth >= 1200;
 
     return SingleChildScrollView(
       primary: false,
       child: ConstrainedBox(
-        constraints:
-            BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height,
+        ),
         child: IntrinsicHeight(
-          child: NavigationRail(
-            selectedIndex: selectedIndex,
-            leading: InkWell(
-              onTap: () => Get.toNamed("/"),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Icon(
-                  Icons.add_to_drive,
-                  size: 32,
-                  color: Theme.of(context).colorScheme.primary,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            color: Theme.of(context).colorScheme.surface,
+            child: NavigationRail(
+              extended: isExtended,
+              minExtendedWidth: 240,
+              selectedIndex: selectedIndex,
+              labelType: isExtended ? null : NavigationRailLabelType.none,
+              useIndicator: true,
+              indicatorColor: Theme.of(context).colorScheme.primaryContainer,
+              backgroundColor: Colors.transparent,
+              leading: InkWell(
+                onTap: () => Get.toNamed("/"),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Icon(
+                    Icons.add_to_drive,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
+              onDestinationSelected: (value) {
+                Get.toNamed(listMainMenu[value].route);
+              },
+              destinations: destinations,
             ),
-            onDestinationSelected: (value) {
-              Get.toNamed(listMainMenu[value].route);
-            },
-            destinations: listRails,
           ),
         ),
       ),

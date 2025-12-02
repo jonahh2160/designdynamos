@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:designdynamos/constant/app_colors.dart';
-import 'package:designdynamos/ui/menu/menu.dart';
+import 'package:designdynamos/ui/menu/rail.dart';
 
 class DesktopScaffold extends StatefulWidget {
   final Widget content;
@@ -20,15 +20,9 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             //! Menu
-            const Menu(),
+            const Rail(),
             //! Content
-            Expanded(
-              child: Stack(
-                children: [
-                  widget.content,
-                ],
-              ),
-            ),
+            Expanded(child: Stack(children: [widget.content])),
           ],
         ),
       ),

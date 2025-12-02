@@ -1,12 +1,20 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 
+//start_date =
+//dude_date = deadline(overdue after this date)
 class TaskService {
   final SupabaseClient _sb;
   TaskService(this._sb);
   SupabaseClient get client => _sb;
 
-  Future<List<TaskItem>> getTodayTasks() async {
+  //Flexible daily-task fetch with optional inclusions.
+  Future<List<TaskItem>> getDailyTasks(
+    DateTime day, {
+    bool includeOverdue = true,
+    bool includeSpanning = true,
+    bool includeUndated = false,
+  }) async {
     //ensuring we only fetch tasks for the current authenticated user
     final userId = _sb.auth.currentUser?.id;
     if (userId == null) {
@@ -14,22 +22,23 @@ class TaskService {
       return const [];
     }
 
-    final day = _formatDateOnly(DateTime.now());
-
-    final response = await _sb
-        .from('tasks')
-        .select(
-          'id, title, icon_name, notes, start_date, due_date, points, priority, order_hint, is_done, completed_at',
-        )
-        .eq('user_id', userId)
-        .or('due_date.eq.$day,start_date.eq.$day')
-        .order('is_done', ascending: true)
-        .order('order_hint', ascending: true);
+    final response = await _sb.rpc(
+      'get_daily_tasks_rpc',
+      params: {
+        'day': day.toUtc().toIso8601String(),
+        'include_overdue': includeOverdue,
+        'include_spanning': includeSpanning,
+        'include_backlog': includeUndated,
+      },
+    );
 
     final List<Map<String, dynamic>> res = (response as List)
         .cast<Map<String, dynamic>>();
-    return res.map(TaskItem.fromMap).toList(growable: false);
+    return res.map(TaskItem.fromMap).toList();
   }
+
+  //Convenience wrapper for "today"
+  Future<List<TaskItem>> getTodayTasks() => getDailyTasks(DateTime.now());
 
   Future<TaskItem> createTask(TaskItem task) async {
     final userId = _sb.auth.currentUser?.id;
@@ -48,8 +57,8 @@ class TaskService {
 
   Future<void> updateTask(
     String taskId, {
-    DateTime? dueDate,
-    bool clearDueDate = false,
+    DateTime? dueAt,
+    bool clearDueAt = false,
     int? priority,
     String? iconName,
     bool? isDone,
@@ -57,10 +66,10 @@ class TaskService {
   }) async {
     final payload = <String, dynamic>{};
 
-    if (clearDueDate) {
-      payload['due_date'] = null;
-    } else if (dueDate != null) {
-      payload['due_date'] = _formatDateOnly(dueDate);
+    if (clearDueAt) {
+      payload['due_at'] = null;
+    } else if (dueAt != null) {
+      payload['due_at'] = dueAt.toUtc().toIso8601String();
     }
 
     if (priority != null) payload['priority'] = priority;
@@ -80,14 +89,39 @@ class TaskService {
   Future<void> toggleDone(String taskId, bool done) =>
       updateTask(taskId, isDone: done);
 
-  Future<void> reorder(String taskId, int newHint) async {
-    await _sb.from('tasks').update({'order_hint': newHint}).eq('id', taskId);
+  Future<void> reorderTasks (String taskId, int newOrderHint) async {
+  await _sb
+      .from('tasks')
+      .update({'order_hint': newOrderHint})
+      .eq('id', taskId);
   }
 
   Future<void> deleteTask(String taskId) async {
-    await _sb.from('tasks').delete().eq('id', taskId);
-  }
+    final userId = _sb.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Cannot delete task without an authenticated user.');
+    }
 
+    await _sb.from('tasks').delete().eq('id', taskId).eq('user_id', userId);
+  }
+  /// Fetch all tasks without filtering by user
+  Future<List<TaskItem>> getAllTasks() async {
+    final userId = _sb.auth.currentUser?.id;
+    if (userId == null) {
+      // No user session; return empty to avoid RLS errors
+      return const [];
+    }
+
+    final response = await _sb
+      .from('tasks')
+      .select()
+      .eq('user_id', userId) // only fetch tasks for this user
+      .order('due_at', ascending: true)   // order by due date first
+      .order('order_hint', ascending: true); // then by order hint
+
+    final List<Map<String, dynamic>> res = (response as List).cast<Map<String, dynamic>>();
+    return res.map(TaskItem.fromMap).toList();
+  }
   //Notes CRUD
   Future<String?> fetchNote(String taskId) async {
     final response = await _sb
@@ -101,35 +135,15 @@ class TaskService {
   }
 
   Future<void> upsertNote(String taskId, String? content) async {
-    final existing = await _sb
-        .from('task_notes')
-        .select('id')
-        .eq('task_id', taskId)
-        .limit(1)
-        .maybeSingle();
-    if (content == null || content.trim().isEmpty) {
-      if (existing != null) {
-        await _sb.from('task_notes').delete().eq('id', existing['id']);
-      }
+    final trimmed = content?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      await _sb.from('task_notes').delete().eq('task_id', taskId);
       return;
     }
-    if (existing == null) {
-      await _sb.from('task_notes').insert({
-        'task_id': taskId,
-        'content': content,
-      });
-    } else {
-      await _sb
-          .from('task_notes')
-          .update({'content': content})
-          .eq('id', existing['id']);
-    }
-  }
-}
 
-String _formatDateOnly(DateTime date) {
-  final y = date.year.toString();
-  final m = date.month.toString().padLeft(2, '0');
-  final d = date.day.toString().padLeft(2, '0');
-  return '$y-$m-$d';
+    await _sb.from('task_notes').upsert({
+      'task_id': taskId,
+      'content': trimmed,
+    }, onConflict: 'task_id');
+  }
 }

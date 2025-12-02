@@ -7,7 +7,7 @@ class TaskItem {
     required this.isDone,
     this.notes,
     this.startDate,
-    this.dueDate,
+    this.dueAt,
     this.priority = 5,
     this.orderHint = 1000,
     this.completedAt,
@@ -20,7 +20,7 @@ class TaskItem {
   final bool isDone;
   final String? notes;
   final DateTime? startDate;
-  final DateTime? dueDate;
+  final DateTime? dueAt;
   final int priority;
   final int orderHint;
   final DateTime? completedAt;
@@ -41,7 +41,7 @@ class TaskItem {
       if (tzNoColon.hasMatch(s)) {
         s = s.replaceFirst(RegExp(r"([+-]\d{2})(\d{2})$"), r"$1:$2");
       } else if (tzShort.hasMatch(s)) {
-        s = s + ":00";
+        s = "$s:00";
       }
       //parse normalized string
       return DateTime.tryParse(s) ?? DateTime.tryParse(value);
@@ -49,14 +49,8 @@ class TaskItem {
     return null;
   }
 
-  static String? _dateOnlyString(DateTime? value) {
-    if (value == null) return null;
-    final local = value; //treating as local date selection from UI
-    final y = local.year.toString();
-    final m = local.month.toString().padLeft(2, '0');
-    final d = local.day.toString().padLeft(2, '0');
-    return "$y-$m-$d";
-  }
+  static String? _utcString(DateTime? value) =>
+      value?.toUtc().toIso8601String();
 
   static int _parseInt(dynamic value, int fallback) {
     if (value is int) return value;
@@ -64,6 +58,8 @@ class TaskItem {
     return fallback;
   }
 
+  //factory construtor is a special type of constructor that can return an instance of the class(existing, chached, new, or even subclass)
+  //dynamic type is a special type that allows a variable to hold values of any type, and type can change durring runtime
   factory TaskItem.fromMap(Map<String, dynamic> map) {
     return TaskItem(
       id: map['id'] as String,
@@ -72,8 +68,8 @@ class TaskItem {
       points: (map['points'] ?? 10) as int,
       isDone: (map['is_done'] ?? false) as bool,
       notes: map['notes'] as String?,
-      startDate: _parseDateTime(map['start_date']),
-      dueDate: _parseDateTime(map['due_date']),
+      startDate: _parseDateTime(map['start_at'] ?? map['start_date']),
+      dueAt: _parseDateTime(map['due_at'] ?? map['due_date']),
       priority: _parseInt(map['priority'], 5),
       orderHint: (map['order_hint'] ?? 1000) as int,
       completedAt: _parseDateTime(map['completed_at']),
@@ -85,9 +81,8 @@ class TaskItem {
     'title': title,
     'icon_name': iconName,
     'notes': notes,
-    //DB columns are DATE; store YYYY-MM-DD only
-    'start_date': _dateOnlyString(startDate),
-    'due_date': _dateOnlyString(dueDate),
+    'start_at': _utcString(startDate),
+    'due_at': _utcString(dueAt),
     'points': points,
     'priority': priority,
     'order_hint': orderHint,
@@ -97,16 +92,15 @@ class TaskItem {
   };
 
   Map<String, dynamic> toUpdateRow({
-    bool clearDueDate = false,
+    bool clearDueAt = false,
     DateTime? overrideCompletedAt,
   }) {
     final data = <String, dynamic>{
       'title': title,
       'icon_name': iconName,
       'notes': notes,
-      //DB columns are DATE; store YYYY-MM-DD only
-      'start_date': _dateOnlyString(startDate),
-      'due_date': clearDueDate ? null : _dateOnlyString(dueDate),
+      'start_at': _utcString(startDate),
+      'due_at': clearDueAt ? null : _utcString(dueAt),
       'points': points,
       'priority': priority,
       'order_hint': orderHint,
@@ -128,8 +122,8 @@ class TaskItem {
     bool? isDone,
     String? notes,
     DateTime? startDate,
-    DateTime? dueDate,
-    bool clearDueDate = false,
+    DateTime? dueAt,
+    bool clearDueAt = false,
     int? priority,
     int? orderHint,
     DateTime? completedAt,
@@ -142,7 +136,7 @@ class TaskItem {
       isDone: isDone ?? this.isDone,
       notes: notes ?? this.notes,
       startDate: startDate ?? this.startDate,
-      dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
       priority: priority ?? this.priority,
       orderHint: orderHint ?? this.orderHint,
       completedAt: completedAt ?? this.completedAt,

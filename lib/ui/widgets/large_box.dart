@@ -45,7 +45,10 @@ class LargeBox extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(color: Colors.white70, thickness: 1),
           const SizedBox(height: 20),
-          if (child != null) child!,
+          if (child != null)
+            Expanded(
+              child: child!,
+            ),
         ],
       ),
     );
