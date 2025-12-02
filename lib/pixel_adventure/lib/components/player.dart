@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:pixel_adventure/components/collision_block.dart';
 import 'package:pixel_adventure/components/custom_hitbox.dart';
 import 'package:pixel_adventure/components/fruit.dart';
+import 'package:pixel_adventure/components/saw.dart';
 import 'package:pixel_adventure/components/utils.dart';
 import 'package:pixel_adventure/pixel_adventure.dart';
 
@@ -15,6 +16,8 @@ enum PlayerState {
   running,
   jumping,
   falling,
+  hit,
+  appearing,
 }
 
 
@@ -29,16 +32,21 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   late final SpriteAnimation runningAnimation;
   late final SpriteAnimation jumpingAnimation;
   late final SpriteAnimation fallingAnimation;
+  late final SpriteAnimation hitAnimation;
+  late final SpriteAnimation appearingAnimation;
 
   final double _gravity = 9.8;
-  final double _jumpForce = 310;
+  final double _jumpForce = 260;
   final double _terminalVelocity = 300; //if you are falling, there will come a time where you'll be free falling at the same speed
 
   double horizontalMovement = 0;
-  double moveSpeed = 150;
+  double moveSpeed = 100;
+
+  Vector2 startingPosition = Vector2.zero();
   Vector2 velocity = Vector2.zero();// x is 0 and y is 0 initially
   bool isOnGround = false;
   bool hasJumped = false;
+  bool gotHit = false;
   List<CollisionBlock> collisionBlocks = [];
   CustomHitbox hitbox = CustomHitbox(
     offsetX: 10, 
@@ -51,6 +59,9 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
 
     _loadAllAnimations();
     //debugMode = true;
+
+    startingPosition = Vector2(position.x, position.y);
+
     add(RectangleHitbox(
       position: Vector2(hitbox.offsetX, hitbox.offsetY),
       size: Vector2(hitbox.width, hitbox.height),
@@ -61,14 +72,14 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
 
   @override
   void update(double dt) {
-    _updatePlayerState();
-    _updatePlayerMovement(dt);
-    _checkHorizontalCollisions();//must check horizontal collision before gravity
-    _applyGravity(dt);
-    _checkVerticalCollisions();
+    if(!gotHit){
+      _updatePlayerState();
+      _updatePlayerMovement(dt);
+      _checkHorizontalCollisions();//must check horizontal collision before gravity
+      _applyGravity(dt);
+      _checkVerticalCollisions();
+    }
     
-
-
     super.update(dt);
   }
 
@@ -89,6 +100,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   @override
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
     if(other is Fruit) other.collidedWithPlayer();
+    if(other is Saw) _respawn();
     
     super.onCollision(intersectionPoints, other);
   }
@@ -98,6 +110,9 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
     runningAnimation = _spriteAnimation("Run", 12);
     jumpingAnimation = _spriteAnimation('Jump', 1);
     fallingAnimation = _spriteAnimation('Fall', 1);
+    hitAnimation = SpriteAnimation.fromFrameData(game.images.fromCache('Main Characters/$character/Hit (32x32).png'), SpriteAnimationData.sequenced(amount: 7, stepTime: stepTime, textureSize: Vector2.all(32),loop: false,));
+    appearingAnimation = _specialSpriteAnimation('Appearing', 7);
+
 
     //linking our enum to animations. This is a list of all animations
     animations = {
@@ -105,6 +120,8 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
       PlayerState.running: runningAnimation,
       PlayerState.jumping: jumpingAnimation,
       PlayerState.falling: fallingAnimation,
+      PlayerState.hit: hitAnimation,
+      PlayerState.appearing: appearingAnimation,
     };
 
     //current animation
@@ -112,7 +129,11 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   }
 
   SpriteAnimation _spriteAnimation(String animationState, int amount ){
-    return  SpriteAnimation.fromFrameData(game.images.fromCache('Main Characters/$character/$animationState (32x32).png'), SpriteAnimationData.sequenced(amount: amount, stepTime: stepTime, textureSize: Vector2.all(32)));
+    return  SpriteAnimation.fromFrameData(game.images.fromCache('Main Characters/$character/$animationState (32x32).png'), SpriteAnimationData.sequenced(amount: amount, stepTime: stepTime, textureSize: Vector2.all(32),));
+  }
+
+  SpriteAnimation _specialSpriteAnimation(String animationState, int amount ){
+    return  SpriteAnimation.fromFrameData(game.images.fromCache('Main Characters/$animationState (96x96).png'), SpriteAnimationData.sequenced(amount: amount, stepTime: stepTime, textureSize: Vector2.all(96), loop: false));
   }
 
   
@@ -215,6 +236,28 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
         
       }
     }
+  }
+
+  void _respawn() {
+    gotHit = true;
+    current = PlayerState.hit;
+    final hitAnimation = animationTickers![PlayerState.hit]!;
+
+    hitAnimation.completed.whenComplete(() {
+      current = PlayerState.appearing;
+      scale.x = 1;//always facing right
+      position = startingPosition - Vector2.all(32);
+      hitAnimation.reset();
+      
+      final appearingAnimation = animationTickers![PlayerState.appearing]!;
+      appearingAnimation.completed.whenComplete(() {
+        velocity = Vector2.zero();
+        position = startingPosition;
+        current = PlayerState.idle;
+        gotHit = false;
+        appearingAnimation.reset();
+      });
+    });
   }
 
 }
