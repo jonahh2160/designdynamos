@@ -164,6 +164,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
             .read<TaskProvider>()
             .refreshToday()
             .catchError((error) => debugPrint('refreshToday failed: $error'));
+        // Load all tasks so overdue notifications are ready on initial view
+        context
+            .read<TaskProvider>()
+            .refreshAllTasks()
+            .catchError((error) => debugPrint('refreshAllTasks failed: $error'));
         context.read<CoinProvider>().refresh();
       }
     });
@@ -176,6 +181,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
             .read<TaskProvider>()
             .refreshToday()
             .catchError((error) => debugPrint('refreshToday failed: $error'));
+        // Keep the full list in sync on auth changes
+        context
+            .read<TaskProvider>()
+            .refreshAllTasks()
+            .catchError((error) => debugPrint('refreshAllTasks failed: $error'));
         context.read<CoinProvider>().refresh();
       } else {
         context.read<CoinProvider>().reset();

@@ -39,6 +39,10 @@ void main() async {
             provider
                 .refreshToday()
                 .catchError((error) => debugPrint('refreshToday failed: $error'));
+            // Also load the full task list so overdue alerts are available immediately
+            provider
+                .refreshAllTasks()
+                .catchError((error) => debugPrint('refreshAllTasks failed: $error'));
             return provider;
           },
         ),
