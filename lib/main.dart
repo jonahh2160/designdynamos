@@ -17,6 +17,8 @@ import 'data/services/goal_service.dart';
 import 'data/services/goal_step_task_service.dart';
 import 'providers/coin_provider.dart';
 import 'data/services/coin_service.dart';
+import 'providers/game_provider.dart';
+import 'data/services/game_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,9 +38,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) {
             final provider = TaskProvider(TaskService(SupabaseService.client));
-            provider
-                .refreshToday()
-                .catchError((error) => debugPrint('refreshToday failed: $error'));
+            provider.refreshToday().catchError(
+              (error) => debugPrint('refreshToday failed: $error'),
+            );
             return provider;
           },
         ),
@@ -51,6 +53,10 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) =>
               CoinProvider(CoinService(SupabaseService.client))..refresh(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              GameProvider(GameService(SupabaseService.client))..refresh(),
         ),
       ],
       child: const MyApp(),
