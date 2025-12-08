@@ -24,7 +24,7 @@ class PixelAdventure extends FlameGame with HasKeyboardHandlerComponents, DragCa
 
     await images.loadAllImages();//loads all images into cache
 
-    final world = Level(levelName: 'Level-02', player: player);//calling our level constructor
+    final world = Level(levelName: 'Level-01', player: player);//calling our level constructor
 
 
     cam = CameraComponent.withFixedResolution(world: world, width: 640, height: 360);

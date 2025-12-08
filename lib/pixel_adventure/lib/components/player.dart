@@ -4,6 +4,7 @@ import 'dart:ui_web';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/services.dart';
+import 'package:pixel_adventure/components/checkpoint.dart';
 import 'package:pixel_adventure/components/collision_block.dart';
 import 'package:pixel_adventure/components/custom_hitbox.dart';
 import 'package:pixel_adventure/components/fruit.dart';
@@ -18,6 +19,7 @@ enum PlayerState {
   falling,
   hit,
   appearing,
+  disappearing,
 }
 
 
@@ -34,9 +36,10 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   late final SpriteAnimation fallingAnimation;
   late final SpriteAnimation hitAnimation;
   late final SpriteAnimation appearingAnimation;
+  late final SpriteAnimation disappearingAnimation;
 
   final double _gravity = 9.8;
-  final double _jumpForce = 260;
+  final double _jumpForce = 600;
   final double _terminalVelocity = 300; //if you are falling, there will come a time where you'll be free falling at the same speed
 
   double horizontalMovement = 0;
@@ -47,6 +50,8 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   bool isOnGround = false;
   bool hasJumped = false;
   bool gotHit = false;
+  bool reachedCheckpoint = false;
+
   List<CollisionBlock> collisionBlocks = [];
   CustomHitbox hitbox = CustomHitbox(
     offsetX: 10, 
@@ -72,7 +77,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
 
   @override
   void update(double dt) {
-    if(!gotHit){
+    if(!gotHit && !reachedCheckpoint){
       _updatePlayerState();
       _updatePlayerMovement(dt);
       _checkHorizontalCollisions();//must check horizontal collision before gravity
@@ -101,6 +106,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
     if(other is Fruit) other.collidedWithPlayer();
     if(other is Saw) _respawn();
+    if(other is Checkpoint && !reachedCheckpoint) _reachedCheckpoint();
     
     super.onCollision(intersectionPoints, other);
   }
@@ -112,6 +118,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
     fallingAnimation = _spriteAnimation('Fall', 1);
     hitAnimation = SpriteAnimation.fromFrameData(game.images.fromCache('Main Characters/$character/Hit (32x32).png'), SpriteAnimationData.sequenced(amount: 7, stepTime: stepTime, textureSize: Vector2.all(32),loop: false,));
     appearingAnimation = _specialSpriteAnimation('Appearing', 7);
+    disappearingAnimation = _specialSpriteAnimation('Desappearing', 7);
 
 
     //linking our enum to animations. This is a list of all animations
@@ -122,6 +129,8 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
       PlayerState.falling: fallingAnimation,
       PlayerState.hit: hitAnimation,
       PlayerState.appearing: appearingAnimation,
+      PlayerState.disappearing: disappearingAnimation,
+      
     };
 
     //current animation
@@ -258,6 +267,20 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
         appearingAnimation.reset();
       });
     });
+  }
+  
+  void _reachedCheckpoint() {
+    reachedCheckpoint = true;
+
+    if(scale.x > 0){
+      position = position - Vector2.all(32);
+    } else if(scale.x < 0){
+      position = position + Vector2(32, -32);
+    }
+
+    current = PlayerState.disappearing;
+
+
   }
 
 }
