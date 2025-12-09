@@ -19,6 +19,8 @@ class PixelAdventure extends FlameGame with HasKeyboardHandlerComponents, DragCa
   Player player = Player(character: 'Pink Man');
   late JoystickComponent joystick;
   bool showControls = false;
+  bool playSounds = true;
+  double soundVolume = 1.0;
   List<String> levelNames = ['Level-01', 'Level-02'];
   int currentLevelIndex = 0;
 

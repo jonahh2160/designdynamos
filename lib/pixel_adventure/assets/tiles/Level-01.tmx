@@ -34,16 +34,16 @@
   <object id="9" x="577.333" y="48" width="14" height="270.667"/>
   <object id="10" x="176" y="176" width="64" height="16"/>
   <object id="11" x="320.667" y="208.667" width="63.3333" height="14.6667"/>
-  <object id="12" type="Platform" x="464.667" y="160" width="63.3333" height="15.3333"/>
-  <object id="14" type="Platform" x="64.6667" y="128" width="46.6667" height="13.3333"/>
-  <object id="15" type="Platform" x="64.6667" y="176" width="46.6667" height="16"/>
-  <object id="16" type="Platform" x="65.3333" y="224" width="46" height="16"/>
+  <object id="12" type="Platform" x="464.667" y="160" width="63.3333" height="15.3333" visible="0"/>
+  <object id="14" type="Platform" x="64.6667" y="128" width="46.6667" height="13.3333" visible="0"/>
+  <object id="15" type="Platform" x="64.6667" y="176" width="46.6667" height="16" visible="0"/>
+  <object id="16" type="Platform" x="65.3333" y="224" width="46" height="16" visible="0"/>
   <object id="17" x="64" y="272.667" width="96" height="47.3333"/>
   <object id="18" x="64" y="256" width="16.6667" height="16"/>
   <object id="54" x="47.3333" y="47.6667" width="16.3333" height="288"/>
   <object id="55" x="527.818" y="224" width="50" height="96.5455"/>
   <object id="56" x="431.818" y="271.818" width="96.3636" height="47.8182"/>
-  <object id="58" type="Platform" x="464" y="224" width="64.3636" height="16"/>
+  <object id="58" type="Platform" x="464" y="224" width="64.3636" height="16" visible="0"/>
  </objectgroup>
  <objectgroup id="2" name="Spawnpoints">
   <object id="3" name="Player" type="Player" x="125" y="240" width="31" height="31"/>
