@@ -4,7 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame/parallax.dart';
 import 'package:flutter/material.dart';
 
-class BackgroundTile extends ParallaxComponent {
+class BackgroundTile extends ParallaxComponent {//parallax has game reference by default
   final String color;
   BackgroundTile({
     this.color = 'Gray',
@@ -13,7 +13,7 @@ class BackgroundTile extends ParallaxComponent {
           position: position,
         );
 
-  final double scrollSpeed = 40;
+  final double scrollSpeed = 50;
 
   @override
   FutureOr<void> onLoad() async {
