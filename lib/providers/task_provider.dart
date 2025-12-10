@@ -81,7 +81,7 @@ class TaskProvider extends ChangeNotifier {
         includeSpanning: _includeSpanning,
       );
       _today = tasks;
-      // Keep the all-tasks cache current so overdue widgets stay fresh.
+      //Keep the all-tasks cache current so overdue widgets stay fresh.
       _allTasks = await _service.getAllTasks();
       _sortToday();
 
@@ -118,7 +118,7 @@ class TaskProvider extends ChangeNotifier {
       ..sort((a, b) => a.dueAt!.toLocal().compareTo(b.dueAt!.toLocal()));
   }
 
-  /// Suggested tasks for today (and near-term) using a local heuristic.
+  ///Suggested tasks for today (and near-term) using a local heuristic.
   List<SuggestedTask> get suggestedTasks {
     return _buildSuggestions();
   }
@@ -190,7 +190,7 @@ class TaskProvider extends ChangeNotifier {
       _sortToday();
       _selectedTaskId = created.id;
 
-      // Update _allTasks
+      //Update _allTasks
       final allIndex = _allTasks.indexWhere((t) => t.id == tempId);
       if (allIndex >= 0) {
         _allTasks[allIndex] = created;
@@ -383,6 +383,39 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> setDueToday(String taskId) async {
+    final today = DateTime.now();
+    final dayOnly = DateTime(today.year, today.month, today.day);
+    final allIndex = _allTasks.indexWhere((t) => t.id == taskId);
+    if (allIndex < 0) return;
+    final before = _allTasks[allIndex];
+    final newDue = _composeDueAt(date: dayOnly, existing: before.dueAt);
+
+    // Update local caches
+    _allTasks[allIndex] = before.copyWith(dueAt: newDue);
+    final todayIdx = _today.indexWhere((t) => t.id == taskId);
+    if (todayIdx >= 0) {
+      _today[todayIdx] = _today[todayIdx].copyWith(dueAt: newDue);
+      _sortToday();
+    }
+    notifyListeners();
+
+    try {
+      await _service.updateTask(taskId, dueAt: newDue);
+      // Refresh daily list so the task appears in today's view
+      await refreshToday();
+    } catch (e) {
+      // rollback on failure
+      _allTasks[allIndex] = before;
+      if (todayIdx >= 0) {
+        _today[todayIdx] = before;
+        _sortToday();
+      }
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<void> deleteTask(String id) async {
     final idx = _today.indexWhere((t) => t.id == id);
     if (idx < 0) return;
@@ -510,7 +543,7 @@ class TaskProvider extends ChangeNotifier {
   //For task ordering
   Future<void> updateTaskOrder(String taskId, int newOrderHint) async {
     try {
-      // Update local list
+      //Update local list
       final index = _today.indexWhere((t) => t.id == taskId);
       if (index != -1) {
         _today[index] = _today[index].copyWith(orderHint: newOrderHint);
@@ -629,8 +662,8 @@ class TaskProvider extends ChangeNotifier {
       final priority = task.priority;
       final target = task.targetAt?.toLocal();
 
-      // Base urgency
-      double urgency = 100; // baseline for undated
+      //Base urgency
+      double urgency = 100; //baseline for undated
       if (due == null) {
         warnings.add('No due date set');
       } else if (due.isBefore(today)) {
@@ -645,11 +678,11 @@ class TaskProvider extends ChangeNotifier {
         urgency = 200;
       }
 
-      // Priority weight (higher priority value => more weight in this app)
+      //Priority weight (higher priority value => more weight in this app)
       if (priority <= 0) warnings.add('No priority set');
       final priorityWeight = (priority <= 0 ? 5 : priority) * 40.0;
 
-      // Target boost
+      //Target boost
       double targetBoost = 0;
       if (target != null &&
           !target.isBefore(today) &&
@@ -657,13 +690,13 @@ class TaskProvider extends ChangeNotifier {
         targetBoost = 80;
       }
 
-      // Goal link boost
+      //Goal link boost
       final goalBoost =
           (task.goalStepId != null || task.goalId != null) ? 60.0 : 0.0;
 
       final baseScore = urgency + priorityWeight + targetBoost + goalBoost;
 
-      // Estimated minutes factor: prefer shorter, but avoid zero/negative.
+      //Estimated minutes factor: prefer shorter, but avoid zero/negative.
       double divisor = 1;
       if (estimate != null && estimate > 0) {
         divisor = math.log(estimate + 1);

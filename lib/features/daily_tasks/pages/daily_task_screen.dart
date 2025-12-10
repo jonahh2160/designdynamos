@@ -10,6 +10,7 @@ import 'package:designdynamos/features/daily_tasks/widgets/add_task_dialog.dart'
 import 'package:designdynamos/features/daily_tasks/widgets/finished_section_header.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
@@ -241,13 +242,13 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     }
 
     final open = p.today.where((t) {
-      // Exclude finished tasks
+      //Exclude finished tasks
       if (t.isDone) return false;
 
-      // Exclude overdue from open only if the filter is off
+      //Exclude overdue from open only if the filter is off
       if (!p.includeOverdue && p.overdueTasks.contains(t)) return false;
 
-      // Otherwise include it
+      //Otherwise include it
       return true;
     }).toList()
       ..sort((a,b) => a.orderHint.compareTo(b.orderHint)); //Order sorting [MJ]
@@ -569,8 +570,8 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           children: [
                             ReorderableListView(
                               physics:
-                                  const NeverScrollableScrollPhysics(), // disable inner scroll
-                              shrinkWrap: true, // shrink to fit children
+                                  const NeverScrollableScrollPhysics(), //disable inner scroll
+                              shrinkWrap: true, //shrink to fit children
                               onReorder: (oldIndex, newIndex) async {
                                 if (newIndex > oldIndex) newIndex--;
 
@@ -811,6 +812,7 @@ class _SuggestionsPanel extends StatelessWidget {
                     final suggestion = suggestions[index];
                     final task = suggestion.task;
                     final dueLabel = _dueLabel(task.dueAt);
+                    final priorityColors = buildPriorityChipColors(task.priority);
                     return Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -851,6 +853,10 @@ class _SuggestionsPanel extends StatelessWidget {
                               _pill(
                                 icon: Icons.flag,
                                 label: 'Priority ${task.priority}',
+                                color: priorityColors.background,
+                                textColor: priorityColors.foreground,
+                                borderColor: priorityColors.border,
+                                borderWidth: 1.2,
                               ),
                               if (task.estimatedMinutes != null)
                                 _pill(
@@ -905,13 +911,18 @@ class _SuggestionsPanel extends StatelessWidget {
     required String label,
     Color color = const Color(0xFF203743),
     Color textColor = AppColors.textSecondary,
+    Color? borderColor,
+    double borderWidth = 1.1,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.sidebarActive.withOpacity(0.6)),
+        border: Border.all(
+          color: borderColor ?? AppColors.sidebarActive.withOpacity(0.8),
+          width: borderWidth,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

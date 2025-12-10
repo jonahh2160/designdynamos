@@ -28,7 +28,7 @@ class ProgressService {
     final cutoffDateStr = cutoffDate.toIso8601String().split('T').first;
     final cutoffIso = cutoffDate.toIso8601String();
 
-    // Pull daily stats for overall activity.
+    //Pull daily stats for overall activity.
     final dailyRows = await _client
         .from('user_daily_stats')
         .select('day, tasks_completed, coins_earned')
@@ -37,7 +37,7 @@ class ProgressService {
 
     final dailySeries = _buildDailySeries(dailyRows, start, now);
 
-    // Pull tasks that were due or completed in the range (superset, filtered locally).
+    //Pull tasks that were due or completed in the range (superset, filtered locally).
     final rawTasks = await _client
         .from('tasks')
         .select(
@@ -76,8 +76,8 @@ class ProgressService {
         }).length /
             filteredTasks.length;
 
-    // If filtering by category, rebuild the day series from the filtered tasks
-    // so the chart reflects the selection.
+    //If filtering by category, rebuild the day series from the filtered tasks
+    //so the chart reflects the selection.
     final List<DailyStatPoint> series = (categoryFilter == null || categoryFilter.isEmpty)
         ? dailySeries
         : _buildSeriesFromTasks(filteredTasks, start, now);
@@ -131,7 +131,7 @@ class ProgressService {
         if (dayRaw == null) continue;
         final parsed = DateTime.tryParse(dayRaw);
         if (parsed == null) continue;
-        // Treat stored DATE as UTC midnight.
+        //Treat stored DATE as UTC midnight.
         final local = DateTime.utc(parsed.year, parsed.month, parsed.day).toLocal();
         final keyDate = DateTime(local.year, local.month, local.day);
         final key = keyDate.toIso8601String().split('T').first;
