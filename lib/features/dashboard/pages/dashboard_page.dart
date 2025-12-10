@@ -34,6 +34,8 @@ class _DashboardPageState extends State<DashboardPage> {
     final secondaryDest = DashboardConstants.secondaryDestinations;
     final mainDestLength = mainDest.length;
     final secondaryDestLength = secondaryDest.length;
+    final incompleteToday = context
+        .select<TaskProvider, int>((p) => p.today.where((t) => !t.isDone).length);
 
     Widget page;
 
@@ -137,6 +139,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       ...List.generate(mainDestLength, (index) {
                         final item = mainDest[index];
                         final isActive = selectedIndex == index;
+                        final badge = (index == 0 && incompleteToday > 0)
+                            ? incompleteToday.toString()
+                            : item.badge;
                         return GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -161,7 +166,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             item: NavItemData(
                               item.icon,
                               item.label,
-                              badge: item.badge,
+                              badge: badge,
                               isActive: isActive,
                             ),
                             showLabel: showLabels,

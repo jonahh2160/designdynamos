@@ -112,6 +112,7 @@ class GameService {
     }, onConflict: 'user_id,game_id');
 
     final updatedBalance = await _coinService.fetchBalance();
+    await _coinService.syncProfileCoins(updatedBalance.totalCoins);
     return GameUnlockResult(
       game: game.copyWith(
         id: gameId,
@@ -154,7 +155,9 @@ class GameService {
       'kind': 'task_uncomplete',
     });
 
-    return _coinService.fetchBalance();
+    final balance = await _coinService.fetchBalance();
+    await _coinService.syncProfileCoins(balance.totalCoins);
+    return balance;
   }
 
   Future<List<Map<String, dynamic>>> _fetchRawGames() async {
