@@ -3,7 +3,9 @@ import 'dart:ui_web';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/services.dart';
+import 'package:pixel_adventure/components/checkpoint.dart';
 import 'package:pixel_adventure/components/collision_block.dart';
 import 'package:pixel_adventure/components/custom_hitbox.dart';
 import 'package:pixel_adventure/components/fruit.dart';
@@ -18,6 +20,7 @@ enum PlayerState {
   falling,
   hit,
   appearing,
+  disappearing,
 }
 
 
@@ -34,6 +37,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   late final SpriteAnimation fallingAnimation;
   late final SpriteAnimation hitAnimation;
   late final SpriteAnimation appearingAnimation;
+  late final SpriteAnimation disappearingAnimation;
 
   final double _gravity = 9.8;
   final double _jumpForce = 260;
@@ -47,12 +51,17 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   bool isOnGround = false;
   bool hasJumped = false;
   bool gotHit = false;
+  bool reachedCheckpoint = false;
+
   List<CollisionBlock> collisionBlocks = [];
   CustomHitbox hitbox = CustomHitbox(
     offsetX: 10, 
     offsetY: 4, 
     width: 14, 
     height: 28);
+
+  double fixedDeltaTime = 1 / 60;
+  double accumulatedTime = 0;
 
   @override
   FutureOr<void> onLoad() {
@@ -72,14 +81,22 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
 
   @override
   void update(double dt) {
-    if(!gotHit){
+    accumulatedTime += dt;
+
+    while(accumulatedTime >= fixedDeltaTime){
+      if(!gotHit && !reachedCheckpoint){
       _updatePlayerState();
-      _updatePlayerMovement(dt);
+      _updatePlayerMovement(fixedDeltaTime);
       _checkHorizontalCollisions();//must check horizontal collision before gravity
-      _applyGravity(dt);
+      _applyGravity(fixedDeltaTime);
       _checkVerticalCollisions();
+      }
+
+      accumulatedTime -= fixedDeltaTime;
     }
+
     
+
     super.update(dt);
   }
 
@@ -98,11 +115,14 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   }
 
   @override
-  void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
-    if(other is Fruit) other.collidedWithPlayer();
-    if(other is Saw) _respawn();
-    
-    super.onCollision(intersectionPoints, other);
+  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
+    if(!reachedCheckpoint){
+      if(other is Fruit) other.collidedWithPlayer();
+      if(other is Saw) _respawn();
+      if(other is Checkpoint && !reachedCheckpoint) _reachedCheckpoint();
+
+    }
+    super.onCollisionStart(intersectionPoints, other);
   }
   
   void _loadAllAnimations() {
@@ -110,8 +130,9 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
     runningAnimation = _spriteAnimation("Run", 12);
     jumpingAnimation = _spriteAnimation('Jump', 1);
     fallingAnimation = _spriteAnimation('Fall', 1);
-    hitAnimation = SpriteAnimation.fromFrameData(game.images.fromCache('Main Characters/$character/Hit (32x32).png'), SpriteAnimationData.sequenced(amount: 7, stepTime: stepTime, textureSize: Vector2.all(32),loop: false,));
+    hitAnimation = _spriteAnimation('Hit', 7)..loop=false;
     appearingAnimation = _specialSpriteAnimation('Appearing', 7);
+    disappearingAnimation = _specialSpriteAnimation('Desappearing', 7);
 
 
     //linking our enum to animations. This is a list of all animations
@@ -122,6 +143,8 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
       PlayerState.falling: fallingAnimation,
       PlayerState.hit: hitAnimation,
       PlayerState.appearing: appearingAnimation,
+      PlayerState.disappearing: disappearingAnimation,
+      
     };
 
     //current animation
@@ -147,6 +170,9 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   }
 
   void _playerJump(double dt) {
+    if(game.playSounds){
+      FlameAudio.play('jump.wav', volume: game.soundVolume);
+    }
     velocity.y = -_jumpForce;
     position.y += velocity.y * dt;
     isOnGround = false;
@@ -238,26 +264,55 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
     }
   }
 
-  void _respawn() {
+  void _respawn() async{
+
+    if(game.playSounds){
+      FlameAudio.play('hit.wav', volume: game.soundVolume);
+    }
+    const canMoveDuration = Duration(milliseconds: 400);
     gotHit = true;
     current = PlayerState.hit;
-    final hitAnimation = animationTickers![PlayerState.hit]!;
+    
+    await animationTicker?.completed;
+    animationTicker?.reset();
 
-    hitAnimation.completed.whenComplete(() {
-      current = PlayerState.appearing;
-      scale.x = 1;//always facing right
-      position = startingPosition - Vector2.all(32);
-      hitAnimation.reset();
-      
-      final appearingAnimation = animationTickers![PlayerState.appearing]!;
-      appearingAnimation.completed.whenComplete(() {
-        velocity = Vector2.zero();
-        position = startingPosition;
-        current = PlayerState.idle;
-        gotHit = false;
-        appearingAnimation.reset();
-      });
-    });
+    scale.x = 1;
+    position = startingPosition - Vector2.all(32);
+    current = PlayerState.appearing;
+
+    await animationTicker?.completed;
+    animationTicker?.reset();
+
+    velocity = Vector2.zero();
+    position = startingPosition;
+    _updatePlayerState();
+    Future.delayed(canMoveDuration, () => gotHit = false);
+  }
+  
+  void _reachedCheckpoint() async{
+    reachedCheckpoint = true;
+
+    if(game.playSounds){
+      FlameAudio.play('disappear.wav', volume: game.soundVolume);
+    }
+
+    if(scale.x > 0){
+      position = position - Vector2.all(32);
+    } else if(scale.x < 0){
+      position = position + Vector2(32, -32);
+    }
+
+    current = PlayerState.disappearing;
+    
+    await animationTicker?.completed;
+    animationTicker?.reset();
+
+    reachedCheckpoint = false;
+    position = Vector2.all(-640); //move off screen
+
+    const waitToChangeDuration = Duration(seconds: 3);
+    Future.delayed(waitToChangeDuration, () => game.loadNextLevel());
+ 
   }
 
 }

@@ -71,20 +71,28 @@ class _OutlookScreenState extends State<OutlookScreen> {
                       final day = days[index];
                       final formattedDate =
                           DateFormat('EEEE, MMM d').format(day);
+                      final DateTime dayStart = DateTime(day.year, day.month, day.day);
+                      final DateTime dayEnd = dayStart.add(const Duration(days: 1));
+
                       final tasksForDay = tasks.where((t) {
-                        if (index == 0) {
-                        // First box = today: include all uncompleted tasks with startDate of today or before
-                          final dueAt = t.dueAt?? t.startDate; // use dueDate if exists, else startDate
-                          if (dueAt == null) return false;
-                          return !t.isDone && !dueAt.isBefore(DateTime(today.year, today.month, today.day));
-                        } else {
-                          // Future days: only tasks exactly on that day
-                          return t.startDate != null &&
-                          t.startDate!.year == day.year &&
-                          t.startDate!.month == day.month &&
-                          t.startDate!.day == day.day;
-                        }
-                      }).toList()..sort((a, b) => a.orderHint.compareTo(b.orderHint));
+                        if (t.isDone) return false;
+                        final startLocal = t.startDate?.toLocal() ?? t.dueAt?.toLocal();
+                        final start = startLocal != null
+                            ? DateTime(startLocal.year, startLocal.month, startLocal.day)
+                            : null;
+                        if (start == null) return false;
+                        final dueLocal = t.dueAt?.toLocal() ?? startLocal;
+                        final due = dueLocal != null
+                            ? DateTime(dueLocal.year, dueLocal.month, dueLocal.day)
+                            : start;
+
+                        final startsBeforeOrOnDay = !start.isAfter(dayEnd.subtract(const Duration(milliseconds: 1)));
+                        final dueOnOrAfterDay = !due.isBefore(dayStart);
+
+                        // Show every day from start through due (inclusive) while not completed.
+                        return startsBeforeOrOnDay && dueOnOrAfterDay;
+                      }).toList()
+                        ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
                       return LargeBox(
                         label: formattedDate,
                         child: SizedBox(

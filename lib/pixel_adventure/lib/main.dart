@@ -12,5 +12,5 @@ void main() async{
   await Flame.device.setLandscape();
 
   PixelAdventure game = PixelAdventure();
-  runApp(GameWidget(game: kDebugMode ? PixelAdventure() : game));//when done just use game
+  runApp(GameWidget(game: game));//(kDebugMode ? PixelAdventure() :)
 }

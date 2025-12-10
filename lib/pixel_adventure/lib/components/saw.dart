@@ -23,7 +23,7 @@ class Saw extends SpriteAnimationComponent with HasGameReference<PixelAdventure>
   FutureOr<void> onLoad() {
     priority = -1;
     add(CircleHitbox());//hitbox same size as saw. Lucky!
-    debugMode = true;
+    debugMode = false;
 
     if(isVertical){
       rangeNeg = position.y - offsetNeg * tileSize;

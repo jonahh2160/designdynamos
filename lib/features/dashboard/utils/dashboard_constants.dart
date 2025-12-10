@@ -5,7 +5,7 @@ import 'package:designdynamos/core/models/subtask_item.dart';
 
 class DashboardConstants {
   static const List<NavItemData> mainDestinations = [
-    NavItemData(Icons.home, 'Daily Tasks', badge: '3', isActive: true),
+    NavItemData(Icons.home, 'Daily Tasks', isActive: true),
     NavItemData(Icons.event_note, 'Calendar'),
     NavItemData(Icons.vrpano, 'Outlook'),
     NavItemData(Icons.view_list, 'All Tasks'),

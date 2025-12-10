@@ -34,9 +34,30 @@ class CoinService {
       return const CoinBalance(totalCoins: 0, todayCoins: 0);
     }
 
-    return CoinBalance(
-      totalCoins: (row['total_coins'] ?? 0) as int,
-      todayCoins: (row['today_coins'] ?? 0) as int,
+    final rawTotal = (row['total_coins'] ?? 0) as int;
+    final rawToday = (row['today_coins'] ?? 0) as int;
+
+    final balance = CoinBalance(
+      totalCoins: rawTotal < 0 ? 0 : rawTotal,
+      todayCoins: rawToday,
     );
+
+    // Keep the denormalized profile.coins in sync for leaderboard/UI.
+    await syncProfileCoins(balance.totalCoins);
+    return balance;
+  }
+
+  Future<void> syncProfileCoins(int coins) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return;
+    final clamped = coins < 0 ? 0 : coins;
+
+    try {
+      await _client
+          .from('profiles')
+          .update({'coins': clamped}).eq('id', userId);
+    } catch (_) {
+      // Swallow errors so coin display doesn't break.
+    }
   }
 }

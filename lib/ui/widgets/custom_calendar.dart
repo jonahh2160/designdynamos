@@ -5,8 +5,13 @@ import 'package:designdynamos/core/theme/app_colors.dart';
 
 class CustomCalendar extends StatefulWidget {
   final void Function(DateTime selectedDay)? onDaySelectedCallback;
+  final Map<DateTime, int> eventCounts;
 
-  const CustomCalendar({super.key, this.onDaySelectedCallback});
+  const CustomCalendar({
+    super.key,
+    this.onDaySelectedCallback,
+    this.eventCounts = const {},
+  });
 
   @override
   State<CustomCalendar> createState() => _CustomCalendarState();
@@ -34,6 +39,11 @@ class _CustomCalendarState extends State<CustomCalendar> {
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
         rowHeight: 111,
+        eventLoader: (day) {
+          final key = DateTime(day.year, day.month, day.day);
+          final count = widget.eventCounts[key] ?? 0;
+          return List.generate(count, (_) => 'event');
+        },
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
@@ -91,6 +101,31 @@ class _CustomCalendarState extends State<CustomCalendar> {
             border: Border.all(color: Colors.transparent),
           ),
           cellAlignment: Alignment.topLeft,
+        ),
+        calendarBuilders: CalendarBuilders(
+          markerBuilder: (context, day, events) {
+            if (events.isEmpty) return const SizedBox.shrink();
+            final count = events.length;
+            return Align(
+              alignment: Alignment.bottomRight,
+              child: Container(
+                margin: const EdgeInsets.only(right: 4, bottom: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.taskCardHighlight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

@@ -31,6 +31,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Replace this with your real TaskProvider fetch
     final tasks = context.watch<TaskProvider>().allTasks;
 
+    // Build event counts by due date (local day)
+    final Map<DateTime, int> eventCounts = {};
+    for (final task in tasks) {
+      final dueLocal = task.dueAt?.toLocal();
+      if (dueLocal == null) continue;
+      final key = DateTime(dueLocal.year, dueLocal.month, dueLocal.day);
+      eventCounts[key] = (eventCounts[key] ?? 0) + 1;
+    }
+
     // Filter tasks for selected day
     final tasksForSelectedDay = tasks.where((task) {
       final dueLocal = task.dueAt?.toLocal();
@@ -52,7 +61,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             const SizedBox(height: 30),
             Text(
-              "Calendar",
+              "Calendar(Shows Tasks due on that day)",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 30,
@@ -67,6 +76,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   height: 850,
                   width: 900,
                   child: CustomCalendar(
+                    eventCounts: eventCounts,
                     onDaySelectedCallback: (selectedDay) {
                       setState(() {
                         _selectedDay = selectedDay;

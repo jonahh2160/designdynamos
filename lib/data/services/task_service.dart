@@ -67,7 +67,8 @@ class TaskService {
         response.cast<Map<String, dynamic>>();
     final all = res.map(TaskItem.fromMap).toList();
 
-    final dayStart = DateTime.utc(day.year, day.month, day.day);
+    final localStart = DateTime(day.year, day.month, day.day);
+    final dayStart = localStart.toUtc();
     final dayEnd = dayStart.add(const Duration(days: 1));
 
     final filtered = all.where((task) {

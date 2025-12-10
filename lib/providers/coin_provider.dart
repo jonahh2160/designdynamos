@@ -34,6 +34,12 @@ class CoinProvider extends ChangeNotifier {
     }
   }
 
+  void updateBalance(CoinBalance balance) {
+    _totalCoins = balance.totalCoins;
+    _todayCoins = balance.todayCoins;
+    notifyListeners();
+  }
+
   void reset() {
     _totalCoins = 0;
     _todayCoins = 0;

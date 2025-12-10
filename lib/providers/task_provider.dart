@@ -80,6 +80,8 @@ class TaskProvider extends ChangeNotifier {
         includeSpanning: _includeSpanning,
       );
       _today = tasks;
+      // Keep the all-tasks cache current so overdue widgets stay fresh.
+      _allTasks = await _service.getAllTasks();
       _sortToday();
 
       if (_today.isEmpty) {
@@ -103,11 +105,16 @@ class TaskProvider extends ChangeNotifier {
   }
 
   List<TaskItem> get overdueTasks {
-  final now = DateTime.now();
-  return _allTasks
-      .where((t) => !t.isDone && t.dueAt != null && t.dueAt!.isBefore(now))
-      .toList()
-    ..sort((a, b) => a.dueAt!.compareTo(b.dueAt!));
+    final now = DateTime.now();
+    return _allTasks
+        .where(
+          (t) =>
+              !t.isDone &&
+              t.dueAt != null &&
+              t.dueAt!.toLocal().isBefore(now),
+        )
+        .toList()
+      ..sort((a, b) => a.dueAt!.toLocal().compareTo(b.dueAt!.toLocal()));
   }
 
   Future<void> refreshAllTasks() async {
@@ -234,6 +241,10 @@ class TaskProvider extends ChangeNotifier {
       completedAt: done ? DateTime.now() : null,
     );
     _today[index] = updated;
+    final allIndex = _allTasks.indexWhere((t) => t.id == id);
+    if (allIndex != -1) {
+      _allTasks[allIndex] = updated;
+    }
     _sortToday();
     notifyListeners();
 
