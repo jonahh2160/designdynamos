@@ -12,6 +12,7 @@ class GameProvider extends ChangeNotifier {
   List<GameInfo> _games = const [];
   String? _error;
   final Set<String> _unlocking = {};
+  final Set<String> _playing = {};
 
   bool get isLoading => _loading;
   List<GameInfo> get games => _games;
@@ -21,6 +22,11 @@ class GameProvider extends ChangeNotifier {
 
   bool isUnlockingGame(GameInfo game) =>
       isUnlocking(game.id) || isUnlocking(game.slug);
+
+  bool isPlaying(String gameIdOrSlug) => _playing.contains(gameIdOrSlug);
+
+  bool isPlayingGame(GameInfo game) =>
+      isPlaying(game.id) || isPlaying(game.slug);
 
   Future<void> refresh() async {
     _loading = true;
@@ -64,6 +70,29 @@ class GameProvider extends ChangeNotifier {
     } finally {
       _unlocking.remove(game.id);
       _unlocking.remove(game.slug);
+      notifyListeners();
+    }
+  }
+
+  Future<void> play(GameInfo game, CoinProvider coinProvider) async {
+    if (_playing.contains(game.id) || _playing.contains(game.slug)) {
+      return;
+    }
+
+    _playing.add(game.id);
+    _playing.add(game.slug);
+    _error = null;
+    notifyListeners();
+
+    try {
+      final balance = await _service.playGame(game);
+      coinProvider.updateBalance(balance);
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _playing.remove(game.id);
+      _playing.remove(game.slug);
       notifyListeners();
     }
   }

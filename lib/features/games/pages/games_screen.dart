@@ -1,5 +1,6 @@
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/features/games/models/game_info.dart';
+import 'package:designdynamos/features/games/pages/pixel_adventure_screen.dart';
 import 'package:designdynamos/providers/coin_provider.dart';
 import 'package:designdynamos/providers/game_provider.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +19,10 @@ class GamesScreen extends StatelessWidget {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            await context.read<CoinProvider>().refresh();
-            await context.read<GameProvider>().refresh();
+            final coinProvider = context.read<CoinProvider>();
+            final gamesProvider = context.read<GameProvider>();
+            await coinProvider.refresh();
+            await gamesProvider.refresh();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -66,6 +69,7 @@ class GamesScreen extends StatelessWidget {
                             game: game,
                             userCoins: coinsProvider.totalCoins,
                             isUnlocking: gameProvider.isUnlockingGame(game),
+                            isPlaying: gameProvider.isPlayingGame(game),
                             onUnlock: () => _handleUnlock(context, game),
                             onPlay: () => _handlePlay(context, game),
                           );
@@ -101,11 +105,30 @@ class GamesScreen extends StatelessWidget {
     }
   }
 
-  void _handlePlay(BuildContext context, GameInfo game) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${game.title} is launching soon.')));
+  Future<void> _handlePlay(BuildContext context, GameInfo game) async {
+    final gameProvider = context.read<GameProvider>();
+    final coinProvider = context.read<CoinProvider>();
+
+    try {
+      await gameProvider.play(game, coinProvider);
+      if (!context.mounted) return;
+
+      if (game.slug.trim() == 'pixel_adventure') {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PixelAdventureScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${game.title} is launching soon.')));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      final message = e.toString().replaceFirst('StateError: ', '');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 
@@ -215,6 +238,7 @@ class GameCard extends StatelessWidget {
     required this.game,
     required this.userCoins,
     required this.isUnlocking,
+    required this.isPlaying,
     required this.onUnlock,
     required this.onPlay,
   });
@@ -222,6 +246,7 @@ class GameCard extends StatelessWidget {
   final GameInfo game;
   final int userCoins;
   final bool isUnlocking;
+  final bool isPlaying;
   final VoidCallback onUnlock;
   final VoidCallback onPlay;
 
@@ -312,7 +337,7 @@ class GameCard extends StatelessWidget {
                       label: isUnlocked
                           ? game.ctaLabel
                           : 'Unlock for ${game.coinCost}',
-                      loading: isUnlocking,
+                      loading: isUnlocking || isPlaying,
                       enabled: isUnlocked || (showUnlock && canAfford),
                       secondary: showUnlock && !canAfford,
                       onPressed: isUnlocked ? onPlay : onUnlock,

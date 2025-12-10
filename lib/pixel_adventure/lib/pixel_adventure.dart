@@ -4,9 +4,11 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
 import 'package:flutter/material.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:pixel_adventure/components/JumpButton.dart';
 import 'package:pixel_adventure/components/player.dart';
 import 'package:pixel_adventure/components/level.dart';
@@ -27,6 +29,7 @@ class PixelAdventure extends FlameGame with HasKeyboardHandlerComponents, DragCa
   @override
   FutureOr<void> onLoad() async {
 
+    _configureAssetPrefixes();
     await images.loadAllImages();//loads all images into cache
 
     _loadLevel();
@@ -37,6 +40,12 @@ class PixelAdventure extends FlameGame with HasKeyboardHandlerComponents, DragCa
     }
 
     return super.onLoad();
+  }
+
+  void _configureAssetPrefixes() {
+    Flame.assets.prefix = 'packages/pixel_adventure/assets/';
+    images.prefix = 'packages/pixel_adventure/assets/images/';
+    FlameAudio.updatePrefix('packages/pixel_adventure/assets/audio/');
   }
 
   @override

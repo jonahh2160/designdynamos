@@ -30,7 +30,7 @@ class GameService {
       title: 'Pixel Adventure',
       description: 'Loading...',
       assetPath: 'assets/images/games/pixel_level.jpg',
-      coinCost: 0,
+      coinCost: 10,
       isFeatured: true,
       isPlayable: true,
       unlockable: false,
@@ -121,6 +121,40 @@ class GameService {
       ),
       balance: updatedBalance,
     );
+  }
+
+  Future<CoinBalance> playGame(GameInfo game) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('You need to be signed in to play.');
+    }
+
+    final isUnlocked = !game.unlockable || game.isUnlocked;
+    if (!isUnlocked) {
+      throw StateError('Unlock ${game.title} before playing.');
+    }
+
+    final cost = game.coinCost;
+    final currentBalance = await _coinService.fetchBalance();
+    final cleanedTitle =
+        game.title.trim().isNotEmpty ? game.title.trim() : game.slug;
+
+    if (cost <= 0) {
+      return currentBalance;
+    }
+
+    if (currentBalance.totalCoins < cost) {
+      throw StateError('Not enough coins to play $cleanedTitle.');
+    }
+
+    await _client.from('coin_transactions').insert({
+      'user_id': userId,
+      'amount': -cost,
+      'reason': 'Played $cleanedTitle',
+      'kind': 'task_uncomplete',
+    });
+
+    return _coinService.fetchBalance();
   }
 
   Future<List<Map<String, dynamic>>> _fetchRawGames() async {

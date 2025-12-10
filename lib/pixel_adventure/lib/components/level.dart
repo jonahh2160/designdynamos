@@ -21,7 +21,11 @@ class Level extends World with HasGameReference<PixelAdventure>{
   List<CollisionBlock> collisionBlocks = [];
   @override
   FutureOr<void> onLoad() async{
-    level = await TiledComponent.load('$levelName.tmx', Vector2.all(16));//textures are 16*16
+    level = await TiledComponent.load(
+      '$levelName.tmx',
+      Vector2.all(16),
+      prefix: 'packages/pixel_adventure/assets/tiles/',
+    );//textures are 16*16
 
     add(level);
 
