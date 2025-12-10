@@ -10,6 +10,7 @@ class DashboardConstants {
     NavItemData(Icons.vrpano, 'Outlook'),
     NavItemData(Icons.view_list, 'All Tasks'),
     NavItemData(Icons.flag, 'Goals'),
+    NavItemData(Icons.insights, 'Progress'),
     NavItemData(Icons.emoji_events, 'Achievements'),
     NavItemData(Icons.sports_esports, 'Games'),
   ];
