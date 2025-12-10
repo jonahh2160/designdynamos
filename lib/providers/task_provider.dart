@@ -6,6 +6,7 @@ import 'package:designdynamos/core/models/db_subtask.dart';
 import 'package:designdynamos/data/services/task_service.dart';
 import 'package:designdynamos/data/services/subtask_service.dart';
 import 'package:designdynamos/data/services/label_service.dart';
+import 'dart:math' as math;
 
 class TaskProvider extends ChangeNotifier {
   TaskProvider(this._service, {SubtaskService? subtasks, LabelService? labels})
@@ -115,6 +116,11 @@ class TaskProvider extends ChangeNotifier {
         )
         .toList()
       ..sort((a, b) => a.dueAt!.toLocal().compareTo(b.dueAt!.toLocal()));
+  }
+
+  /// Suggested tasks for today (and near-term) using a local heuristic.
+  List<SuggestedTask> get suggestedTasks {
+    return _buildSuggestions();
   }
 
   Future<void> refreshAllTasks() async {
@@ -604,4 +610,115 @@ class TaskProvider extends ChangeNotifier {
       resolvedTime.inMinutes.remainder(60),
     );
   }
+
+  List<SuggestedTask> _buildSuggestions() {
+    if (_today.isEmpty) return const [];
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endOfToday = today.add(const Duration(days: 1));
+    const horizonDays = 2;
+    final horizon = today.add(Duration(days: horizonDays + 1));
+
+    final List<SuggestedTask> suggestions = [];
+    for (final task in _today) {
+      if (task.isDone) continue;
+
+      final warnings = <String>[];
+      final due = task.dueAt?.toLocal();
+      final estimate = task.estimatedMinutes;
+      final priority = task.priority;
+      final target = task.targetAt?.toLocal();
+
+      // Base urgency
+      double urgency = 100; // baseline for undated
+      if (due == null) {
+        warnings.add('No due date set');
+      } else if (due.isBefore(today)) {
+        final daysOverdue = today.difference(due).inDays + 1;
+        urgency = 1000 + daysOverdue * 20;
+      } else if (!due.isAfter(endOfToday)) {
+        urgency = 700;
+      } else if (!due.isAfter(horizon)) {
+        final daysAway = due.difference(today).inDays;
+        urgency = 500 - daysAway * 40;
+      } else {
+        urgency = 200;
+      }
+
+      // Priority weight (higher priority value => more weight in this app)
+      if (priority <= 0) warnings.add('No priority set');
+      final priorityWeight = (priority <= 0 ? 5 : priority) * 40.0;
+
+      // Target boost
+      double targetBoost = 0;
+      if (target != null &&
+          !target.isBefore(today) &&
+          !target.isAfter(horizon)) {
+        targetBoost = 80;
+      }
+
+      // Goal link boost
+      final goalBoost =
+          (task.goalStepId != null || task.goalId != null) ? 60.0 : 0.0;
+
+      final baseScore = urgency + priorityWeight + targetBoost + goalBoost;
+
+      // Estimated minutes factor: prefer shorter, but avoid zero/negative.
+      double divisor = 1;
+      if (estimate != null && estimate > 0) {
+        divisor = math.log(estimate + 1);
+        if (divisor <= 0) divisor = 1;
+      } else {
+        warnings.add('No estimate set');
+      }
+
+      final score = baseScore / divisor;
+
+      suggestions.add(
+        SuggestedTask(
+          task: task,
+          score: score,
+          warnings: warnings,
+        ),
+      );
+    }
+
+    suggestions.sort((a, b) {
+      final scoreCmp = b.score.compareTo(a.score);
+      if (scoreCmp != 0) return scoreCmp;
+
+      final dueA = a.task.dueAt;
+      final dueB = b.task.dueAt;
+      if (dueA != null && dueB != null) {
+        final dueCmp = dueA.compareTo(dueB);
+        if (dueCmp != 0) return dueCmp;
+      } else if (dueA == null && dueB != null) {
+        return 1;
+      } else if (dueA != null && dueB == null) {
+        return -1;
+      }
+
+      final priCmp = b.task.priority.compareTo(a.task.priority);
+      if (priCmp != 0) return priCmp;
+
+      final orderCmp = a.task.orderHint.compareTo(b.task.orderHint);
+      if (orderCmp != 0) return orderCmp;
+
+      return a.task.title.compareTo(b.task.title);
+    });
+
+    return suggestions;
+  }
+}
+
+class SuggestedTask {
+  const SuggestedTask({
+    required this.task,
+    required this.score,
+    required this.warnings,
+  });
+
+  final TaskItem task;
+  final double score;
+  final List<String> warnings;
 }
