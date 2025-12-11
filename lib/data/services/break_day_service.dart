@@ -33,8 +33,10 @@ class BreakDayService {
       if (raw is! String) continue;
       final parsed = DateTime.tryParse(raw);
       if (parsed == null) continue;
-      final local = parsed.toLocal();
-      result.add(_dayKey(local));
+      //Stored as UTC day boundary that already represents the user's local day.
+      //Do NOT shift to local again or the day will slip backward in negative offsets.
+      final utcDay = DateTime.utc(parsed.year, parsed.month, parsed.day);
+      result.add(_dayKey(utcDay));
     }
     return result;
   }

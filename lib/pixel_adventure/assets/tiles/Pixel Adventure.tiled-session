@@ -37,11 +37,11 @@
                 2,
                 3
             ],
-            "scale": 1.5,
+            "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 315.6666666666667,
-                "y": 132.66666666666669
+                "x": 298.75,
+                "y": 139
             }
         },
         "Pixel Adventure.tsx": {

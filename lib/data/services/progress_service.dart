@@ -208,19 +208,43 @@ class ProgressService {
     Set<String> breakDays,
   ) {
     if (series.isEmpty) return 0;
+    final today = DateTime.now();
+    final todayDay = DateTime(today.year, today.month, today.day);
     final Set<String> activeDays = {
       for (final p in series)
-        if (p.completed > 0) p.day.toIso8601String().split('T').first,
+        if (p.completed > 0) _dayKey(p.day),
     };
-    DateTime cursor = DateTime.now();
+
+    //Find the most recent completed day (not in the future).
+    DateTime? lastCompleted;
+    for (final key in activeDays) {
+      final parsed = DateTime.tryParse(key);
+      if (parsed == null) continue;
+      final dayOnly = DateTime(parsed.year, parsed.month, parsed.day);
+      if (dayOnly.isAfter(todayDay)) continue;
+      if (lastCompleted == null || dayOnly.isAfter(lastCompleted)) {
+        lastCompleted = dayOnly;
+      }
+    }
+    if (lastCompleted == null) return 0;
+
+    //If we already missed a working day since the last completion (excluding today),
+    //the streak is broken.
+    var forwardCursor = lastCompleted.add(const Duration(days: 1));
+    while (forwardCursor.isBefore(todayDay)) {
+      final key = _dayKey(forwardCursor);
+      if (!breakDays.contains(key) && !activeDays.contains(key)) {
+        return 0;
+      }
+      forwardCursor = forwardCursor.add(const Duration(days: 1));
+    }
+
     int streak = 0;
+    DateTime cursor = lastCompleted;
     int guard = 0;
     while (true) {
       if (guard > 365) break; //safety
-      final key = DateTime(cursor.year, cursor.month, cursor.day)
-          .toIso8601String()
-          .split('T')
-          .first;
+      final key = _dayKey(cursor);
       if (breakDays.contains(key)) {
         cursor = cursor.subtract(const Duration(days: 1));
         guard += 1;
@@ -318,6 +342,11 @@ class ProgressService {
       return DateTime.tryParse(s)?.toLocal();
     }
     return null;
+  }
+
+  String _dayKey(DateTime dt) {
+    final day = DateTime(dt.year, dt.month, dt.day);
+    return day.toIso8601String().split('T').first;
   }
 }
 

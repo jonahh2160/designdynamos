@@ -118,12 +118,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       )
                       .toList(),
                   onChanged: (value) {
-                    final next = (value == null || value == 'All categories')
-                        ? null
-                        : value;
-                    context
-                        .read<ProgressProvider>()
-                        .refresh(category: next);
+                    final isReset = value == null || value == 'All categories';
+                    final next = isReset ? null : value;
+                    context.read<ProgressProvider>().refresh(
+                          category: next,
+                          resetCategory: isReset,
+                        );
                   },
                 ),
                 const Spacer(),
