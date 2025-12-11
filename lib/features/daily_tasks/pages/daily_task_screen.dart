@@ -10,6 +10,7 @@ import 'package:designdynamos/features/daily_tasks/widgets/add_task_dialog.dart'
 import 'package:designdynamos/features/daily_tasks/widgets/finished_section_header.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
+import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
@@ -30,6 +31,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   StreamSubscription<AuthState>? _authSub;
 
   bool _overdueExpanded = true;
+  bool _showSuggestions = false;
 
   Future<void> _openFilterSheet() async {
     final p = context.read<TaskProvider>();
@@ -240,13 +242,13 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     }
 
     final open = p.today.where((t) {
-      // Exclude finished tasks
+      //Exclude finished tasks
       if (t.isDone) return false;
 
-      // Exclude overdue from open only if the filter is off
+      //Exclude overdue from open only if the filter is off
       if (!p.includeOverdue && p.overdueTasks.contains(t)) return false;
 
-      // Otherwise include it
+      //Otherwise include it
       return true;
     }).toList()
       ..sort((a,b) => a.orderHint.compareTo(b.orderHint)); //Order sorting [MJ]
@@ -497,9 +499,14 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 ),
                           ),
                         ),
-                        const ActionChipButton(
+                        ActionChipButton(
                           icon: Icons.auto_awesome,
-                          label: 'Suggestions',
+                          label: _showSuggestions ? 'Hide suggestions' : 'Suggestions',
+                          onTap: () {
+                            setState(() {
+                              _showSuggestions = !_showSuggestions;
+                            });
+                          },
                         ),
                         const SizedBox(width: 12),
                         ActionChipButton(
@@ -563,8 +570,8 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           children: [
                             ReorderableListView(
                               physics:
-                                  const NeverScrollableScrollPhysics(), // disable inner scroll
-                              shrinkWrap: true, // shrink to fit children
+                                  const NeverScrollableScrollPhysics(), //disable inner scroll
+                              shrinkWrap: true, //shrink to fit children
                               onReorder: (oldIndex, newIndex) async {
                                 if (newIndex > oldIndex) newIndex--;
 
@@ -642,15 +649,46 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
 
               final children = <Widget>[taskColumn];
 
-              if (detailPanel != null) {
+              if (_showSuggestions || detailPanel != null) {
+                final suggestionsPanel = _SuggestionsPanel(
+                  suggestions: p.suggestedTasks,
+                  isLoading: p.isLoading,
+                  onRefresh: () => p.refreshToday(),
+                  onSelect: (task) => p.selectTask(task.id),
+                  onComplete: (task) {
+                    _toggleTaskCompletion(
+                      p,
+                      context.read<CoinProvider>(),
+                      task,
+                      true,
+                    );
+                  },
+                );
+
+                Widget sidePanel;
+                if (_showSuggestions && detailPanel != null) {
+                  sidePanel = Column(
+                    children: [
+                      suggestionsPanel,
+                      const SizedBox(height: 16),
+                      Expanded(child: detailPanel),
+                    ],
+                  );
+                } else if (_showSuggestions) {
+                  sidePanel = suggestionsPanel;
+                } else {
+                  sidePanel = detailPanel!;
+                }
+
                 children.add(
                   isCompact
                       ? const SizedBox(height: 24)
                       : const SizedBox(width: 24),
                 );
+
                 final boundedPanel = isCompact
-                    ? SizedBox(height: compactPanelHeight, child: detailPanel)
-                    : SizedBox(width: panelWidth, child: detailPanel);
+                    ? SizedBox(height: compactPanelHeight, child: sidePanel)
+                    : SizedBox(width: panelWidth, child: sidePanel);
                 if (isCompact) {
                   children.add(
                     Flexible(flex: 0, fit: FlexFit.loose, child: boundedPanel),
@@ -676,5 +714,245 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   void dispose() {
     _authSub?.cancel();
     super.dispose();
+  }
+}
+
+class _SuggestionsPanel extends StatelessWidget {
+  const _SuggestionsPanel({
+    required this.suggestions,
+    required this.isLoading,
+    required this.onRefresh,
+    required this.onSelect,
+    required this.onComplete,
+  });
+
+  final List<SuggestedTask> suggestions;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+  final void Function(TaskItem task) onSelect;
+  final void Function(TaskItem task) onComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.sidebarActive.withOpacity(0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Suggested for today',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: AppColors.textMuted),
+                tooltip: 'Refresh suggestions',
+                onPressed: isLoading ? null : onRefresh,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Overdue and due-soon tasks are prioritized. Shorter, higher-priority tasks bubble up.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (isLoading)
+            const LinearProgressIndicator(
+              minHeight: 3,
+              color: AppColors.taskCardHighlight,
+              backgroundColor: AppColors.progressTrack,
+            ),
+          if (!isLoading) ...[
+            if (suggestions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.textMuted),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No tasks scheduled for today—add or reschedule to see suggestions.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              SizedBox(
+                height: 320,
+                child: ListView.separated(
+                  itemCount: suggestions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final suggestion = suggestions[index];
+                    final task = suggestion.task;
+                    final dueLabel = _dueLabel(task.dueAt);
+                    final priorityColors = buildPriorityChipColors(task.priority);
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.detailCard,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.sidebarActive.withOpacity(0.8),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  task.title,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                dueLabel,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              _pill(
+                                icon: Icons.flag,
+                                label: 'Priority ${task.priority}',
+                                color: priorityColors.background,
+                                textColor: priorityColors.foreground,
+                                borderColor: priorityColors.border,
+                                borderWidth: 1.2,
+                              ),
+                              if (task.estimatedMinutes != null)
+                                _pill(
+                                  icon: Icons.timer,
+                                  label: '${task.estimatedMinutes} min',
+                                ),
+                              if (task.goalStepId != null || task.goalId != null)
+                                _pill(
+                                  icon: Icons.checklist,
+                                  label: 'Linked to goal',
+                                ),
+                              if (suggestion.warnings.isNotEmpty)
+                                ...suggestion.warnings.map(
+                                  (w) => _pill(
+                                    icon: Icons.warning_amber_rounded,
+                                    label: w,
+                                    color: Colors.orangeAccent.withOpacity(0.2),
+                                    textColor: Colors.orangeAccent,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              OutlinedButton(
+                                onPressed: () => onSelect(task),
+                                child: const Text('View / Edit'),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () => onComplete(task),
+                                icon: const Icon(Icons.check_circle_outline),
+                                label: const Text('Mark done'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _pill({
+    required IconData icon,
+    required String label,
+    Color color = const Color(0xFF203743),
+    Color textColor = AppColors.textSecondary,
+    Color? borderColor,
+    double borderWidth = 1.1,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: borderColor ?? AppColors.sidebarActive.withOpacity(0.8),
+          width: borderWidth,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _dueLabel(DateTime? due) {
+    if (due == null) return 'No due date';
+    final local = due.toLocal();
+    final today = DateTime.now();
+    final startToday = DateTime(today.year, today.month, today.day);
+    final endToday = startToday.add(const Duration(days: 1));
+
+    if (local.isBefore(startToday)) return 'Overdue';
+    if (!local.isAfter(endToday)) return 'Due today';
+    final diffDays = local.difference(startToday).inDays;
+    if (diffDays <= 2) return 'Due in $diffDays day${diffDays == 1 ? '' : 's'}';
+    return DateFormat('MMM d').format(local);
   }
 }

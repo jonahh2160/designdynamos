@@ -8,6 +8,7 @@ import 'package:designdynamos/features/dashboard/widgets/sidebar_button.dart';
 import 'package:designdynamos/features/games/pages/games_screen.dart';
 import 'package:designdynamos/features/goals/pages/goals_screen.dart';
 import 'package:designdynamos/features/outlook/pages/outlook_screen.dart';
+import 'package:designdynamos/features/progress/pages/progress_screen.dart';
 import 'package:designdynamos/features/popout/pages/popout_screen.dart';
 import 'package:designdynamos/features/settings/pages/settings_screen.dart';
 import 'package:designdynamos/features/tasks/pages/tasks_screen.dart';
@@ -56,18 +57,21 @@ class _DashboardPageState extends State<DashboardPage> {
         page = GoalsScreen();
         break;
       case 5:
-        page = AchievementsScreen();
+        page = const ProgressScreen();
         break;
       case 6:
-        page = GamesScreen();
+        page = AchievementsScreen();
         break;
       case 7:
-        page = PopOutScreen();
+        page = GamesScreen();
         break;
       case 8:
-        page = SettingsScreen();
+        page = PopOutScreen();
         break;
       case 9:
+        page = SettingsScreen();
+        break;
+      case 10:
         page = SignOutScreen();
       default:
         throw UnimplementedError('no widget for $selectedIndex');
@@ -129,10 +133,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                     ),
                               )
                             : SizedBox.shrink(), //Icon(
-                            //     Icons.add_task,
-                            //     size: 32,
-                            //     color: AppColors.textMuted,
-                            //   ),
+                            //   Icons.add_task,
+                            //   size: 32,
+                            //   color: AppColors.textMuted,
+                            // ),
                       ),
                       SizedBox(height: showLabels ? 32 : 24),
                       //Primary nav items

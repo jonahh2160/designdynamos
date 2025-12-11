@@ -3,6 +3,7 @@ import 'package:designdynamos/providers/task_provider.dart';
 import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:designdynamos/core/widgets/action_chip_button.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
 
@@ -51,16 +52,52 @@ class TasksScreen extends StatelessWidget {
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final task = tasks[index];
-                          return TaskCard(
-                            task: task,
-                            onTap: () => taskProvider.selectTask(task.id),
-                            onToggle: () async {
-                              await taskProvider.toggleDone(task.id, !task.isDone);
-                            },
-                            isSelected: taskProvider.selectedTask?.id == task.id,
-                            subtaskDone: taskProvider.subtaskProgress(task.id).$1,
-                            subtaskTotal: taskProvider.subtaskProgress(task.id).$2,
-                            labels: taskProvider.labelsOf(task.id),
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TaskCard(
+                                task: task,
+                                onTap: () => taskProvider.selectTask(task.id),
+                                onToggle: () async {
+                                  await taskProvider.toggleDone(task.id, !task.isDone);
+                                },
+                                isSelected: taskProvider.selectedTask?.id == task.id,
+                                subtaskDone: taskProvider.subtaskProgress(task.id).$1,
+                                subtaskTotal: taskProvider.subtaskProgress(task.id).$2,
+                                labels: taskProvider.labelsOf(task.id),
+                              ),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: ActionChipButton(
+                                  icon: Icons.today_outlined,
+                                  label: 'Set due today',
+                                  onTap: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final due = task.dueAt?.toLocal();
+                                    final today = DateUtils.dateOnly(DateTime.now());
+                                    if (due != null && DateUtils.isSameDay(due, today)) {
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Task is already due today'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    try {
+                                      await taskProvider.setDueToday(task.id);
+                                      messenger.showSnackBar(
+                                        const SnackBar(content: Text('Due date set to today')),
+                                      );
+                                    } catch (error) {
+                                      messenger.showSnackBar(
+                                        SnackBar(content: Text('Failed to update due date: $error')),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),

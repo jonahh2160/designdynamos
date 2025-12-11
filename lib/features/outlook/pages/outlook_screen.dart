@@ -24,7 +24,7 @@ class _OutlookScreenState extends State<OutlookScreen> {
   void initState() {
     super.initState();
 
-    // Fetch tasks after the first frame
+    //Fetch tasks after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TaskProvider>().refreshAllTasks();
     });
@@ -89,14 +89,14 @@ class _OutlookScreenState extends State<OutlookScreen> {
                         final startsBeforeOrOnDay = !start.isAfter(dayEnd.subtract(const Duration(milliseconds: 1)));
                         final dueOnOrAfterDay = !due.isBefore(dayStart);
 
-                        // Show every day from start through due (inclusive) while not completed.
+                        //Show every day from start through due (inclusive) while not completed.
                         return startsBeforeOrOnDay && dueOnOrAfterDay;
                       }).toList()
                         ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
                       return LargeBox(
                         label: formattedDate,
                         child: SizedBox(
-                          height: 575, // or any height that fits your layout
+                          height: 575, //or any height that fits your layout
                           child: Scrollbar(
                             thumbVisibility: true,
                             child: ListView(

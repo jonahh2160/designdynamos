@@ -18,7 +18,7 @@ class BackgroundTile extends ParallaxComponent {//parallax has game reference by
   @override
   FutureOr<void> onLoad() async {
     priority = -10;
-    size = Vector2.all(64);//adding the .6 allows the lines to blend nicely
+    size = Vector2.all(64.8);//adding the .6 allows the lines to blend nicely
     parallax = await game.loadParallax(
       [ParallaxImageData('Background/$color.png')],
       baseVelocity: Vector2(0, -scrollSpeed),

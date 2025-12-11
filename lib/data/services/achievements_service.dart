@@ -162,7 +162,7 @@ class AchievementsService {
           .where((row) => row['day'] != null)
           .map((row) {
             final raw = row['day'] as String;
-            // Treat stored DATE as UTC midnight, then shift to local day to match user view.
+            //Treat stored DATE as UTC midnight, then shift to local day to match user view.
             final asUtc = DateTime.utc(
               int.parse(raw.substring(0, 4)),
               int.parse(raw.substring(5, 7)),
@@ -227,7 +227,7 @@ class AchievementsService {
     };
 
     final now = DateTime.now();
-    // Build the current week (Mon–Sun) in order, so all days are shown.
+    //Build the current week (Mon–Sun) in order, so all days are shown.
     final startOfWeek = DateTime(now.year, now.month, now.day)
         .subtract(Duration(days: now.weekday - DateTime.monday));
     final List<DayStreakStatus> days = [];
@@ -310,7 +310,7 @@ class AchievementsService {
       ),
     ];
 
-    // Keep any extra badges from the backend.
+    //Keep any extra badges from the backend.
     final extra = existing.where((b) => !byId.containsKey(b.id)).toList();
     return [
       ...{for (final b in badges) b.id: b}.values,

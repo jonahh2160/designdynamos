@@ -20,7 +20,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void initState() {
     super.initState();
 
-    // Fetch tasks after the first frame
+    //Fetch tasks after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TaskProvider>().refreshAllTasks();
     });
@@ -28,10 +28,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Replace this with your real TaskProvider fetch
+    //Replace this with your real TaskProvider fetch
     final tasks = context.watch<TaskProvider>().allTasks;
 
-    // Build event counts by due date (local day)
+    //Build event counts by due date (local day)
     final Map<DateTime, int> eventCounts = {};
     for (final task in tasks) {
       final dueLocal = task.dueAt?.toLocal();
@@ -40,14 +40,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       eventCounts[key] = (eventCounts[key] ?? 0) + 1;
     }
 
-    // Filter tasks for selected day
+    //Filter tasks for selected day
     final tasksForSelectedDay = tasks.where((task) {
       final dueLocal = task.dueAt?.toLocal();
-      if (dueLocal == null) return false; // ignore tasks with no due date
+      if (dueLocal == null) return false; //ignore tasks with no due date
        final dueDate = DateTime(dueLocal.year, dueLocal.month, dueLocal.day);
        final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
 
-        // Show task if it's due on the selected day
+        //Show task if it's due on the selected day
         return dueDate == selectedDate;
     }).toList()
       ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
@@ -84,9 +84,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 40), // spacing between calendar and box
+                const SizedBox(width: 40), //spacing between calendar and box
                 Container(
-                  margin: const EdgeInsets.only(top: 100), // adjust top margin
+                  margin: const EdgeInsets.only(top: 100), //adjust top margin
                   height: 675,
                   width: 500,
                   child: LargeBox(

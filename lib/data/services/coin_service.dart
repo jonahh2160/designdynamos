@@ -42,7 +42,7 @@ class CoinService {
       todayCoins: rawToday,
     );
 
-    // Keep the denormalized profile.coins in sync for leaderboard/UI.
+    //Keep the denormalized profile.coins in sync for leaderboard/UI.
     await syncProfileCoins(balance.totalCoins);
     return balance;
   }
@@ -57,7 +57,7 @@ class CoinService {
           .from('profiles')
           .update({'coins': clamped}).eq('id', userId);
     } catch (_) {
-      // Swallow errors so coin display doesn't break.
+      //Swallow errors so coin display doesn't break.
     }
   }
 }
