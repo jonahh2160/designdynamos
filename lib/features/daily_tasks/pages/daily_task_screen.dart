@@ -19,6 +19,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/providers/coin_provider.dart';
+import 'package:designdynamos/providers/break_day_provider.dart';
 
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
@@ -35,10 +36,17 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
 
   Future<void> _openFilterSheet() async {
     final p = context.read<TaskProvider>();
+    final breakProvider = context.read<BreakDayProvider>();
     DateTime day = p.day;
     bool includeOverdue = p.includeOverdue;
     bool includeSpanning = p.includeSpanning;
     bool sortByEstimate = p.sortByEstimate;
+    try {
+      await breakProvider.ensureCovers(day);
+    } catch (error) {
+      debugPrint('Failed to refresh break days: $error');
+    }
+    bool isBreakDay = breakProvider.isBreakDay(day);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -86,8 +94,22 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       );
                       if (picked != null) {
                         setState(() => day = picked);
+                        await breakProvider.ensureCovers(picked);
+                        setState(() {
+                          isBreakDay = breakProvider.isBreakDay(picked);
+                        });
                       }
                     },
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Mark this day as a break'),
+                    subtitle: const Text(
+                      'Breaks pause streak requirements and are skipped by default scheduling.',
+                    ),
+                    value: isBreakDay,
+                    onChanged: (v) => setState(() => isBreakDay = v),
                   ),
                   const Divider(),
                   SwitchListTile(
@@ -126,6 +148,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           final messenger = ScaffoldMessenger.of(context);
                           Navigator.of(context).pop();
                           try {
+                            await breakProvider.ensureCovers(day);
+                            final currentlyBreak = breakProvider.isBreakDay(day);
+                            if (isBreakDay != currentlyBreak) {
+                              await breakProvider.setBreakDay(day, isBreakDay);
+                            }
                             await taskProvider.refreshDaily(
                                   day: day,
                                   includeOverdue: includeOverdue,
@@ -167,6 +194,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
             .refreshToday()
             .catchError((error) => debugPrint('refreshToday failed: $error'));
         context.read<CoinProvider>().refresh();
+        context
+            .read<BreakDayProvider>()
+            .ensureCovers(DateTime.now())
+            .catchError((error) => debugPrint('ensureCovers failed: $error'));
       }
     });
 
@@ -179,6 +210,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
             .refreshToday()
             .catchError((error) => debugPrint('refreshToday failed: $error'));
         context.read<CoinProvider>().refresh();
+        context
+            .read<BreakDayProvider>()
+            .ensureCovers(DateTime.now())
+            .catchError((error) => debugPrint('ensureCovers failed: $error'));
       } else {
         context.read<CoinProvider>().reset();
       }
@@ -237,9 +272,11 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<TaskProvider>();
     final coins = context.watch<CoinProvider>();
+    final breakProvider = context.watch<BreakDayProvider>();
     if (p.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final isBreakDay = breakProvider.isBreakDay(p.day);
 
     final open = p.today.where((t) {
       //Exclude finished tasks
@@ -486,6 +523,55 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       streakLabel:
                           '${finished.length}/${p.today.length} tasks completed',
                     ),
+                    if (isBreakDay)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.sidebarActive.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.taskCardHighlight.withOpacity(0.6),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.beach_access,
+                                color: AppColors.taskCardHighlight,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Break day: tasks are optional and your streak is paused.',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  try {
+                                    await context
+                                        .read<BreakDayProvider>()
+                                        .setBreakDay(p.day, false);
+                                  } catch (error) {
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to end break: $error'),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text('Resume'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 24),
                     Row(
                       children: [

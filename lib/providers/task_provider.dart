@@ -391,7 +391,7 @@ class TaskProvider extends ChangeNotifier {
     final before = _allTasks[allIndex];
     final newDue = _composeDueAt(date: dayOnly, existing: before.dueAt);
 
-    // Update local caches
+    //Update local caches
     _allTasks[allIndex] = before.copyWith(dueAt: newDue);
     final todayIdx = _today.indexWhere((t) => t.id == taskId);
     if (todayIdx >= 0) {
@@ -402,10 +402,10 @@ class TaskProvider extends ChangeNotifier {
 
     try {
       await _service.updateTask(taskId, dueAt: newDue);
-      // Refresh daily list so the task appears in today's view
+      //Refresh daily list so the task appears in today's view
       await refreshToday();
     } catch (e) {
-      // rollback on failure
+      //rollback on failure
       _allTasks[allIndex] = before;
       if (todayIdx >= 0) {
         _today[todayIdx] = before;

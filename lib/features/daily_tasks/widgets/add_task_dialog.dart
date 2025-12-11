@@ -8,6 +8,8 @@ import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart
 import 'package:designdynamos/features/daily_tasks/utils/task_icon_registry.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
+import 'package:designdynamos/providers/break_day_provider.dart';
+import 'package:provider/provider.dart';
 
 class AddTaskDialog extends StatefulWidget {
   const AddTaskDialog({super.key});
@@ -130,6 +132,27 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         subtasks: subtasks,
         labels: labels,
       ),
+    );
+  }
+
+  DateTime _defaultDueAt(DateTime reference) {
+    final local = reference.toLocal();
+    final truncated = DateTime(local.year, local.month, local.day, local.hour)
+        .add(const Duration(hours: 1));
+    BreakDayProvider? breakProvider;
+    try {
+      breakProvider = context.read<BreakDayProvider>();
+    } catch (_) {
+      breakProvider = null;
+    }
+    if (breakProvider == null) return truncated;
+    final nextWorkingDay = breakProvider.nextWorkingDay(truncated);
+    return DateTime(
+      nextWorkingDay.year,
+      nextWorkingDay.month,
+      nextWorkingDay.day,
+      truncated.hour,
+      truncated.minute,
     );
   }
 
@@ -416,12 +439,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       ],
     );
   }
-}
-
-DateTime _defaultDueAt(DateTime reference) {
-  final local = reference.toLocal();
-  final truncated = DateTime(local.year, local.month, local.day, local.hour);
-  return truncated.add(const Duration(hours: 1));
 }
 
 String _formattedDate(DateTime date) =>
