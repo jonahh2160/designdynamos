@@ -25,8 +25,6 @@ class BreakDayService {
         .gte('start_at', startUtc.toIso8601String())
         .lt('start_at', endUtc.toIso8601String());
 
-    if (response is! List) return {};
-
     final Set<String> result = {};
     for (final row in response.whereType<Map<String, dynamic>>()) {
       final raw = row['start_at'];

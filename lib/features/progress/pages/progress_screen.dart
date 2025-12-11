@@ -50,12 +50,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final theme = Theme.of(context);
     final tts = context.read<TtsProvider>();
 
-    final categoryOptions = [
+    final categoryOptions = {
       'All categories',
       ...snapshot.availableCategories.where(
         (name) => name.trim().isNotEmpty,
       ),
-    ].toSet().toList(); //dedupe
+    }.toList(); //dedupe
 
     final categoryValue = snapshot.categoryFilter ?? 'All categories';
 
