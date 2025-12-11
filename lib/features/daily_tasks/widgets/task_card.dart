@@ -2,7 +2,9 @@ import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:flutter/semantics.dart';
+import 'package:provider/provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart';
@@ -65,72 +67,96 @@ class TaskCard extends StatelessWidget {
 
     final iconData = TaskIconRegistry.iconFor(task.iconName);
 
+    // Semantics label
+    final List<String> semanticsParts = [
+      task.title,
+      if (completed) "Completed",
+      if (subtaskTotal > 0) "Subtasks: $subtaskDone of $subtaskTotal completed",
+      if (task.targetAt != null) _formatTargetLabel(task.targetAt!),
+      if (task.dueAt != null) _formatDueLabel(task.dueAt!),
+      "Priority ${task.priority}",
+      if (task.points > 0) "${task.points} points",
+    ];
+    final String semanticsLabel = semanticsParts.join(', ');
+    final ttsProvider = context.read<TtsProvider>();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Material(
-        color: baseColor,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
+      child: MouseRegion(
+        onEnter: (_) {
+          if (ttsProvider.isEnabled) {
+            ttsProvider.speak(semanticsLabel);
+          }
+        },
+        child: Semantics(
+          label: semanticsLabel,
+          button: true,
+          child: Material(
+            color: baseColor,
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: borderColor, width: borderWidth),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (onToggle != null)
-                GestureDetector(
-                  onTap: onToggle,
-                  behavior: HitTestBehavior.translucent,
-                  child: StatusPip(isCompleted: completed),
+              onTap: onTap,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: borderColor, width: borderWidth),
                 ),
-                const SizedBox(width: 14),
-                IconContainer(icon: iconData, isCompleted: completed),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.title,
-                        style: titleStyle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (onToggle != null)
+                      GestureDetector(
+                        onTap: onToggle,
+                        behavior: HitTestBehavior.translucent,
+                        child: StatusPip(isCompleted: completed),
                       ),
-                      const SizedBox(height: 6),
-                      _MetadataRow(
-                        task: task,
-                        done: subtaskDone,
-                        total: subtaskTotal,
-                        labels: labels,
+                    const SizedBox(width: 14),
+                    IconContainer(icon: iconData, isCompleted: completed),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            style: titleStyle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
+                          ),
+                          const SizedBox(height: 6),
+                          _MetadataRow(
+                            task: task,
+                            done: subtaskDone,
+                            total: subtaskTotal,
+                            labels: labels,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    if (task.points > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.scoreBadge.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '${task.points}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                if (task.points > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.scoreBadge.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '${task.points}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
         ),
@@ -225,7 +251,19 @@ class _MetadataRow extends StatelessWidget {
       chips.add(MetaChip(icon: Icons.check_circle_outline, label: 'Done'));
     }
 
-    return Wrap(spacing: 8, runSpacing: 8, children: chips);
+    return Wrap(
+      spacing: 8, 
+      runSpacing: 8, 
+      children: chips.map((widget) {
+        if (widget is MetaChip || widget is TagChip) {
+          return Semantics(
+            label: (widget as dynamic).label,
+            child: widget,
+          );
+        }
+        return widget;
+      }).toList(),
+    );
   }
 }
 

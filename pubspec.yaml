@@ -42,6 +42,8 @@ dependencies:
   table_calendar: ^3.2.0
   supabase_flutter: ^2.5.4
   flame: ^1.34.0
+  flame_audio: ^2.11.12
+  flutter_tts: ^4.2.0  # For testing text-to-speech accessibility
   pixel_adventure:
     path: lib/pixel_adventure
 

@@ -14,6 +14,7 @@ import 'package:designdynamos/features/daily_tasks/widgets/meta_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +31,7 @@ class DailyTaskScreen extends StatefulWidget {
 class _DailyTaskScreenState extends State<DailyTaskScreen> {
   bool _isAdding = false;
   StreamSubscription<AuthState>? _authSub;
+  bool _announcedPage = false;
 
   bool _overdueExpanded = true;
   bool _showSuggestions = false;
@@ -183,6 +185,18 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_announcedPage) {
+      final tts = context.read<TtsProvider>();
+      if (tts.isEnabled) {
+        tts.speak('Daily Tasks screen');
+        _announcedPage = true;
+      }
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     //initial fetch after first frame
@@ -219,7 +233,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
       }
     });
   }
-
+  
   Future<void> _toggleTaskCompletion(
     TaskProvider provider,
     CoinProvider coinProvider,
@@ -273,6 +287,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     final p = context.watch<TaskProvider>();
     final coins = context.watch<CoinProvider>();
     final breakProvider = context.watch<BreakDayProvider>();
+    final tts = context.read<TtsProvider>();
     if (p.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -502,25 +517,29 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     );
 
             final availableWidth = constraints.maxWidth;
-            final panelWidth = math.max(
-              280.0,
-              math.min(availableWidth * 0.34, 380.0),
-            );
-            final availableHeight = MediaQuery.of(context).size.height;
-            final compactPanelHeight = math.min(availableHeight * 0.6, 560.0);
+              final panelWidth = math.max(
+                280.0,
+                math.min(availableWidth * 0.34, 380.0),
+              );
+              final availableHeight = MediaQuery.of(context).size.height;
+              final compactPanelHeight = math.min(availableHeight * 0.6, 560.0);
 
-            final taskColumn = Flexible(
-              flex: 1,
-              fit: FlexFit.tight,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ProgressOverview(
-                    completed: finished.length,
-                    total: p.today.length,
-                    coins: coins.totalCoins,
-                    streakLabel:
-                        '${finished.length}/${p.today.length} tasks completed',
+              final taskColumn = Flexible(
+                flex: 1,
+                fit: FlexFit.tight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Semantics(
+                      header: true,
+                      label: '${finished.length} of ${p.today.length} tasks completed. You have ${coins.totalCoins} coins.',
+                      child: ProgressOverview(
+                      completed: finished.length,
+                      total: p.today.length,
+                      coins: coins.totalCoins,
+                      streakLabel:
+                          '${finished.length}/${p.today.length} tasks completed',
+                    ),
                   ),
                   if (isBreakDay)
                     Padding(
@@ -568,9 +587,55 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                               child: const Text('Resume'),
                             ),
                           ],
+
+                    const SizedBox(height: 24),
+                    Semantics(
+                      header: true,
+                      label: 'Tasks for ${DateFormat('MMMM d').format(p.day)}',
+                      child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            DateFormat('MMMM d').format(p.day),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                          ),
+                        ),
+                        Semantics(
+                          label: 'Suggestions',
+                          button: true,
+                          child:const ActionChipButton(
+                            icon: Icons.auto_awesome,
+                            label: 'Suggestions',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Semantics(
+                          label: 'Add task',
+                          button: true,
+                          child: ActionChipButton(
+                            icon: Icons.add,
+                            label: 'Add task',
+                            onTap: _handleAddTask,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Semantics(
+                          label: 'Filter tasks',
+                          button: true,
+                            child:ActionChipButton(
+                            icon: Icons.filter_list,
+                            label: 'Filter',
+                            onTap: _openFilterSheet,
+                          ),
+
                         ),
                       ),
                     ),
+
                   const SizedBox(height: 24),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,6 +647,33 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                               ?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
+
+                    ),
+                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    Semantics(
+                      container: true,
+                      label: p.overdueTasks.isNotEmpty
+                          ? 'Overdue section. ${p.overdueTasks.length} overdue tasks.'
+                          : 'No overdue tasks.',
+                      child: ExpansionTile(
+                              key: const PageStorageKey('overdueTasks'),
+                              initiallyExpanded: _overdueExpanded,
+                              onExpansionChanged: (expanded) {
+                                setState(() {
+                                  _overdueExpanded = expanded;
+                                });
+                              },
+                              leading: Icon(
+                                p.overdueTasks.isNotEmpty ? Icons.warning : Icons.check_circle,
+                                color: p.overdueTasks.isNotEmpty ? Colors.red : Colors.green,
+                              ),
+                              title: Text(
+                                p.overdueTasks.isNotEmpty
+                                    ? 'Overdue assignments need attention!'
+                                    : 'No overdue assignments',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+
                               ),
                         ),
                       ),

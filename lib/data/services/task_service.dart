@@ -59,9 +59,6 @@ class TaskService {
         .order('order_hint', ascending: true);
 
     final response = await query;
-    if (response is! List) {
-      throw StateError('getDailyTasks query returned unexpected shape: $response');
-    }
 
     final List<Map<String, dynamic>> res =
         response.cast<Map<String, dynamic>>();

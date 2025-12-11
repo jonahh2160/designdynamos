@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:designdynamos/providers/task_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/core/widgets/action_chip_button.dart';
+import 'package:provider/provider.dart';
+import 'package:designdynamos/providers/task_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
+
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -12,6 +16,7 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
+
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
@@ -32,6 +37,21 @@ class _TasksScreenState extends State<TasksScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+
+  bool _announced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+
+    final tts = context.read<TtsProvider>();
+    if (tts.isEnabled) {
+      _announced = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) tts.speak('All Tasks screen');
+      });
+    }
   }
 
   @override
@@ -60,12 +80,16 @@ class _TasksScreenState extends State<TasksScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
-            Text(
-              "All Tasks",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
+            Semantics(
+              header: true,
+              label: 'All Tasks Screen',
+              child: Text(
+                "All Tasks",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 30,
+                    ),
+              ),
             ),
             const SizedBox(height: 16),
             TextField(

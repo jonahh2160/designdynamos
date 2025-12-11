@@ -236,7 +236,7 @@ class _GoalStepTile extends StatelessWidget {
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
-                '${completedTasks}/${tasks.length}',
+                '$completedTasks/${tasks.length}',
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
