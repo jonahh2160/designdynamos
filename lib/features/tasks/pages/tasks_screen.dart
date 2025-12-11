@@ -94,7 +94,7 @@ class _TasksScreenState extends State<TasksScreen> {
                         child: Text(
                           _query.isEmpty
                               ? 'No tasks available'
-                              : 'No tasks match "${_query}"',
+                              : 'No tasks match "$_query"',
                           style: const TextStyle(color: Colors.white70),
                         ),
                       )

@@ -377,7 +377,7 @@ class _AttachTaskSheetState extends State<_AttachTaskSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedStepId,
+            initialValue: _selectedStepId,
             decoration: const InputDecoration(labelText: 'Goal step'),
             items: widget.goal.steps
                 .map(
@@ -389,7 +389,7 @@ class _AttachTaskSheetState extends State<_AttachTaskSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedTaskId,
+            initialValue: _selectedTaskId,
             decoration: const InputDecoration(labelText: 'Task'),
             items: widget.tasks
                 .map(
@@ -506,7 +506,7 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
-              value: _priority,
+              initialValue: _priority,
               decoration: const InputDecoration(labelText: 'Priority'),
               items: [
                 for (var value = 1; value <= 10; value++)

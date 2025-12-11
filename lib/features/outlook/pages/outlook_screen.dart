@@ -4,10 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:designdynamos/ui/widgets/large_box.dart';
 import 'package:designdynamos/providers/task_provider.dart';
-import 'package:designdynamos/core/models/task_draft.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 
 
 class OutlookScreen extends StatefulWidget {
