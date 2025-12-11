@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:designdynamos/features/dashboard/pages/dashboard_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:designdynamos/data/services/supabase_service.dart';
+import 'package:designdynamos/features/auth/pages/login_page.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,9 +27,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) tts.speak('Settings screen');
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
+    final sections = [
+      _SettingsSection(title: 'Account', children: [_DisplayNameTile()]),
+      _SettingsSection(title: 'Accessibility', children: [_TtsToggleTile()]),
+    ];
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -46,11 +54,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            _SettingsSection(
-              title: 'Accessibility',
-              children: [
-                _TtsToggleTile(),
-              ],
+            ...sections.map(
+              (section) => Padding(
+                padding: const EdgeInsets.only(bottom: 32),
+                child: section,
+              ),
             ),
           ],
         ),
@@ -60,10 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({
-    required this.title,
-    required this.children,
-  });
+  const _SettingsSection({required this.title, required this.children});
 
   final String title;
   final List<Widget> children;
@@ -93,23 +98,95 @@ class _SettingsSection extends StatelessWidget {
   }
 }
 
+class _DisplayNameTile extends StatefulWidget {
+  @override
+  State<_DisplayNameTile> createState() => _DisplayNameTileState();
+}
+
+class _DisplayNameTileState extends State<_DisplayNameTile> {
+  final _display_nameController = TextEditingController();
+  final supabase = SupabaseService.client;
+
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getProfile();
+  }
+
+  Future<void> _getProfile() async {
+    setState(() => _loading = true);
+    try {
+      final userId = supabase.auth.currentSession!.user.id;
+      final data = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .single();
+      _display_nameController.text = data['display_name'] ?? '';
+    } catch (_) {}
+    setState(() => _loading = false);
+  }
+
+  Future<void> _updateProfile() async {
+    setState(() => _loading = true);
+    final updates = {
+      'id': supabase.auth.currentUser!.id,
+      'display_name': _display_nameController.text.trim(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    try {
+      await supabase.from('profiles').upsert(updates);
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _display_nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          TextFormField(
+            controller: _display_nameController,
+            decoration: const InputDecoration(labelText: 'Display Name'),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _loading ? null : _updateProfile,
+            child: Text(_loading ? 'Saving...' : 'Update Profile'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TtsToggleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ttsProvider = context.watch<TtsProvider>();
-    
+
     return MouseRegion(
       onEnter: (_) {
         // Announce toggle state when hovered
-        final label = ttsProvider.isEnabled 
-          ? 'Text to speech testing mode enabled, switch to disable' 
-          : 'Text to speech testing mode disabled, switch to enable';
+        final label = ttsProvider.isEnabled
+            ? 'Text to speech testing mode enabled, switch to disable'
+            : 'Text to speech testing mode disabled, switch to enable';
         ttsProvider.speak(label);
       },
       child: Semantics(
-        label: ttsProvider.isEnabled 
-          ? 'Text to speech testing mode enabled, switch to disable' 
-          : 'Text to speech testing mode disabled, switch to enable',
+        label: ttsProvider.isEnabled
+            ? 'Text to speech testing mode enabled, switch to disable'
+            : 'Text to speech testing mode disabled, switch to enable',
         toggled: ttsProvider.isEnabled,
         child: SwitchListTile(
           title: const Text(
@@ -123,7 +200,10 @@ class _TtsToggleTile extends StatelessWidget {
           value: ttsProvider.isEnabled,
           onChanged: (_) => ttsProvider.toggleTts(),
           activeThumbColor: AppColors.accent,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 8,
+          ),
         ),
       ),
     );

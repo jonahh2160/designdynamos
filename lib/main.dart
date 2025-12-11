@@ -30,7 +30,6 @@ import 'features/auth/pages/login_page.dart';
 
 import 'providers/tts_provider.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.init(); //initialize Supabase
@@ -79,9 +78,7 @@ void main() async {
             ProgressService(SupabaseService.client, breakDays: breakDayService),
           ),
         ),
-        ChangeNotifierProvider(
-          create: (_) => TtsProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => TtsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -168,19 +165,6 @@ class SidebarButton extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-extension ContextExtension on BuildContext {
-  void showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(this).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError
-            ? Theme.of(this).colorScheme.error
-            : Theme.of(this).snackBarTheme.backgroundColor,
       ),
     );
   }
