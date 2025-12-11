@@ -1,11 +1,10 @@
 import 'dart:async';
 
+import 'package:designdynamos/features/dashboard/pages/dashboard_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/data/services/supabase_service.dart';
-import 'package:designdynamos/main.dart';
-import 'package:designdynamos/features/auth/pages/account_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -61,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
         if (session != null) {
           _redirecting = true;
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AccountPage()),
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
           );
         }
       },
@@ -102,6 +101,19 @@ class _LoginPageState extends State<LoginPage> {
             child: Text(_isLoading ? 'Sending...' : 'Send Magic Link'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+extension ContextExtension on BuildContext {
+  void showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(this).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError
+            ? Theme.of(this).colorScheme.error
+            : Theme.of(this).snackBarTheme.backgroundColor,
       ),
     );
   }
