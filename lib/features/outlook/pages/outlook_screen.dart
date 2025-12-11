@@ -1,13 +1,12 @@
-import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
-import "package:flutter/material.dart";
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import 'package:designdynamos/ui/widgets/large_box.dart';
-import 'package:designdynamos/providers/task_provider.dart';
-import 'package:designdynamos/core/models/task_draft.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/gestures.dart';
+
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
+import 'package:designdynamos/providers/task_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
+import 'package:designdynamos/ui/widgets/large_box.dart';
 
 
 class OutlookScreen extends StatefulWidget {
@@ -19,6 +18,40 @@ class OutlookScreen extends StatefulWidget {
 
 class _OutlookScreenState extends State<OutlookScreen> {
   final ScrollController scrollController = ScrollController();
+  bool _announced = false;
+  DateTime? _lastScrollAnnounce;
+
+  void _announceScrollbar(TtsProvider tts) {
+    if (!tts.isEnabled) return;
+
+    final now = DateTime.now();
+    if (_lastScrollAnnounce != null &&
+        now.difference(_lastScrollAnnounce!) < const Duration(seconds: 2)) {
+      return;
+    }
+
+    _lastScrollAnnounce = now;
+    tts.speak(
+      'Horizontal scrollbar. Use mouse wheel, trackpad, or arrow keys to move between days.',
+    );
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!scrollController.hasClients) return;
+
+    // Map vertical wheel movement to horizontal scroll; preserve any native horizontal delta.
+    final delta = event.scrollDelta.dx != 0 ? event.scrollDelta.dx : event.scrollDelta.dy;
+    if (delta == 0) return;
+
+    final position = scrollController.position;
+    final target = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+
+    scrollController.jumpTo(target);
+  }
 
   @override
   void initState() {
@@ -31,8 +64,24 @@ class _OutlookScreenState extends State<OutlookScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Announce page title once when TTS is enabled
+    if (!_announced) {
+      final tts = context.read<TtsProvider>();
+      if (tts.isEnabled) {
+        _announced = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) tts.speak('Outlook screen');
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tasks = context.watch<TaskProvider>().allTasks;
+    final tts = context.read<TtsProvider>();
 
     final DateTime today = DateTime.now();
     final List<DateTime> days = List.generate(
@@ -47,29 +96,42 @@ class _OutlookScreenState extends State<OutlookScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
-            Text(
-              "Outlook",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 30,
+            Semantics(
+              header: true,
+              label: "Outlook Screen",
+              child: Text(
+                "Outlook",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 30,
               ),
+            ),
             ),
             const SizedBox(height: 40),
             Center(
               child: SizedBox(
                 height: 700,
-                child: Scrollbar(
-                  controller: scrollController,
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  child: ListView.separated(
-                    controller: scrollController,
-                    scrollDirection: Axis.horizontal,
-                    itemCount: days.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) {
+                child: Semantics(
+                  label: 'Day list with horizontal scrollbar. Use mouse wheel, trackpad, or arrow keys to navigate days.',
+                  hint: 'Scrollable horizontally',
+                  child: MouseRegion(
+                    opaque: true,
+                    onEnter: (_) => _announceScrollbar(tts),
+                    onHover: (_) => _announceScrollbar(tts),
+                    child: Listener(
+                      onPointerSignal: _handlePointerSignal,
+                      child: Scrollbar(
+                        controller: scrollController,
+                        thumbVisibility: true,
+                        trackVisibility: true,
+                        child: ListView.separated(
+                          controller: scrollController,
+                          scrollDirection: Axis.horizontal,
+                          itemCount: days.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 16),
+                          itemBuilder: (context, index) {
                       final day = days[index];
-                      final formattedDate =
+                        final formattedDate =
                           DateFormat('EEEE, MMM d').format(day);
                       final DateTime dayStart = DateTime(day.year, day.month, day.day);
                       final DateTime dayEnd = dayStart.add(const Duration(days: 1));
@@ -93,33 +155,56 @@ class _OutlookScreenState extends State<OutlookScreen> {
                         return startsBeforeOrOnDay && dueOnOrAfterDay;
                       }).toList()
                         ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
-                      return LargeBox(
-                        label: formattedDate,
-                        child: SizedBox(
-                          height: 575, // or any height that fits your layout
-                          child: Scrollbar(
-                            thumbVisibility: true,
-                            child: ListView(
-                            children: tasksForDay.isEmpty
-                              ? [const Text("No events", style: TextStyle(color: Colors.white70))]
-                              : tasksForDay.map((task) => TaskCard(
-                                task: task,
-                                onTap: () {},
-                                onToggle: null,
-                                subtaskDone: context.read<TaskProvider>().subtaskProgress(task.id).$1,
-                                subtaskTotal: context.read<TaskProvider>().subtaskProgress(task.id).$2,
-                                labels: context.read<TaskProvider>().labelsOf(task.id),
-                              )).toList(),
+                      
+                      final itemCountLabel = tasksForDay.isEmpty
+                          ? 'No tasks'
+                          : '${tasksForDay.length} task${tasksForDay.length == 1 ? '' : 's'}';
+                      final dayLabel = 'Tasks for $formattedDate, $itemCountLabel';
+
+                      return MouseRegion(
+                        onEnter: (_) => tts.speak(dayLabel),
+                        child: Semantics(
+                          label: dayLabel,
+                          child: LargeBox(
+                          label: formattedDate,
+                          child: SizedBox(
+                            height: 575, // or any height that fits your layout
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: ListView(
+                              children: tasksForDay.isEmpty
+                                ? [
+                                  Semantics(
+                                    label: "No events this day",
+                                    child: const Text("No events", 
+                                    style: TextStyle(color: Colors.white70),
+                                    ),
+                                  )
+                                  ]
+                                : tasksForDay.map((task) => TaskCard(
+                                  task: task,
+                                  onTap: () {},
+                                  onToggle: null,
+                                  subtaskDone: context.read<TaskProvider>().subtaskProgress(task.id).$1,
+                                  subtaskTotal: context.read<TaskProvider>().subtaskProgress(task.id).$2,
+                                  labels: context.read<TaskProvider>().labelsOf(task.id),
+                                )).toList(),
+                              ),
                             ),
                           ),
+                        ),
                         ),
                       );
                     },
                   ),
                 ),
+                ),
               ),
             ),
+            ),
+            ),
           ],
+      
         ),
       ),
     );

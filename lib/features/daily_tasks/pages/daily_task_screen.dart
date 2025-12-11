@@ -13,6 +13,7 @@ import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_detail_panel.dart';
 import 'package:designdynamos/features/dashboard/widgets/progress_overview.dart';
 import 'package:designdynamos/providers/task_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,7 @@ class DailyTaskScreen extends StatefulWidget {
 class _DailyTaskScreenState extends State<DailyTaskScreen> {
   bool _isAdding = false;
   StreamSubscription<AuthState>? _authSub;
+  bool _announcedPage = false;
 
   bool _overdueExpanded = true;
 
@@ -154,6 +156,18 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_announcedPage) {
+      final tts = context.read<TtsProvider>();
+      if (tts.isEnabled) {
+        tts.speak('Daily Tasks screen');
+        _announcedPage = true;
+      }
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     //initial fetch after first frame
@@ -235,6 +249,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<TaskProvider>();
     final coins = context.watch<CoinProvider>();
+    final tts = context.read<TtsProvider>();
     if (p.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -477,15 +492,22 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ProgressOverview(
+                    Semantics(
+                      header: true,
+                      label: '${finished.length} of ${p.today.length} tasks completed. You have ${coins.totalCoins} coins.',
+                      child: ProgressOverview(
                       completed: finished.length,
                       total: p.today.length,
                       coins: coins.totalCoins,
                       streakLabel:
                           '${finished.length}/${p.today.length} tasks completed',
                     ),
+                    ),
                     const SizedBox(height: 24),
-                    Row(
+                    Semantics(
+                      header: true,
+                      label: 'Tasks for ${DateFormat('MMMM d').format(p.day)}',
+                      child: Row(
                       children: [
                         Expanded(
                           child: Text(
@@ -497,27 +519,45 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 ),
                           ),
                         ),
-                        const ActionChipButton(
-                          icon: Icons.auto_awesome,
+                        Semantics(
                           label: 'Suggestions',
+                          button: true,
+                          child:const ActionChipButton(
+                            icon: Icons.auto_awesome,
+                            label: 'Suggestions',
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        ActionChipButton(
-                          icon: Icons.add,
+                        Semantics(
                           label: 'Add task',
-                          onTap: _handleAddTask,
+                          button: true,
+                          child: ActionChipButton(
+                            icon: Icons.add,
+                            label: 'Add task',
+                            onTap: _handleAddTask,
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        ActionChipButton(
-                          icon: Icons.filter_list,
-                          label: 'Filter',
-                          onTap: _openFilterSheet,
+                        Semantics(
+                          label: 'Filter tasks',
+                          button: true,
+                            child:ActionChipButton(
+                            icon: Icons.filter_list,
+                            label: 'Filter',
+                            onTap: _openFilterSheet,
+                          ),
                         ),
                       ],
                     ),
+                    ),
                     const SizedBox(height: 16),
                     const SizedBox(height: 12),
-                            ExpansionTile(
+                    Semantics(
+                      container: true,
+                      label: p.overdueTasks.isNotEmpty
+                          ? 'Overdue section. ${p.overdueTasks.length} overdue tasks.'
+                          : 'No overdue tasks.',
+                      child: ExpansionTile(
                               key: const PageStorageKey('overdueTasks'),
                               initiallyExpanded: _overdueExpanded,
                               onExpansionChanged: (expanded) {
@@ -538,7 +578,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                               children: [
                                 if (p.overdueTasks.isNotEmpty)
                                   for (final overdue in p.overdueTasks)
-                                    OverdueTaskAlert(
+                                  Semantics(
+                                    label: 'Overdue task ${overdue.title}',
+                                    child: OverdueTaskAlert(
+                                      tts: tts,
                                       task: overdue,
                                       onDelete: (task) async => await p.deleteTask(task.id),
                                       onComplete: (task) async => await p.toggleDone(task.id, true),
@@ -554,8 +597,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                         }
                                       }
                                     ),
+                                  ),
                               ],
                             ),
+                    ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(
@@ -583,8 +628,45 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                               },
                               children: [
                                 for (final task in open)
-                                  TaskCard(
-                                    key: ValueKey(task.id),
+                                  Semantics(
+                                    label: task.title,
+                                    button: true,
+                                    child:TaskCard(
+                                      key: ValueKey(task.id),
+                                      task: task,
+                                      isSelected: task.id == selectedTaskId,
+                                      onTap: () => p.selectTask(task.id),
+                                      onToggle: () {
+                                        _toggleTaskCompletion(
+                                          p,
+                                          context.read<CoinProvider>(),
+                                          task,
+                                          !task.isDone,
+                                        );
+                                      },
+                                      subtaskDone: p.subtaskProgress(task.id).$1,
+                                      subtaskTotal:
+                                          p.subtaskProgress(task.id).$2,
+                                      labels: p.labelsOf(task.id),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            Semantics(
+                              header: true,
+                              label: 'Finished section. ${finished.length} finished tasks.',
+                              child: FinishedSectionHeader(
+                                title: 'Finished tasks: ${finished.length} total.',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            for (final task in finished)
+                              Semantics(
+                                label: task.title,
+                                button: true,
+                                child: TaskCard(
                                     task: task,
                                     isSelected: task.id == selectedTaskId,
                                     onTap: () => p.selectTask(task.id),
@@ -597,40 +679,18 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                       );
                                     },
                                     subtaskDone: p.subtaskProgress(task.id).$1,
-                                    subtaskTotal:
-                                        p.subtaskProgress(task.id).$2,
+                                    subtaskTotal: p.subtaskProgress(task.id).$2,
                                     labels: p.labelsOf(task.id),
                                   ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-
-                            FinishedSectionHeader(
-                              title: 'Finished - ${finished.length}',
-                            ),
-                            const SizedBox(height: 12),
-                            for (final task in finished)
-                              TaskCard(
-                                task: task,
-                                isSelected: task.id == selectedTaskId,
-                                onTap: () => p.selectTask(task.id),
-                                onToggle: () {
-                                  _toggleTaskCompletion(
-                                    p,
-                                    context.read<CoinProvider>(),
-                                    task,
-                                    !task.isDone,
-                                  );
-                                },
-                                subtaskDone: p.subtaskProgress(task.id).$1,
-                                subtaskTotal: p.subtaskProgress(task.id).$2,
-                                labels: p.labelsOf(task.id),
                               ),
                             const SizedBox(height: 16),
-                            AddTaskCard(
+                            Semantics(
+                              label: 'Add new task button',
+                              button: true,
+                              child: AddTaskCard(
                               onPressed: _handleAddTask,
                               isLoading: _isAdding || p.isCreating,
+                              ),
                             ),
                           ],
                         ),

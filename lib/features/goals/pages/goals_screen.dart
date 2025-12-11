@@ -93,17 +93,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
             children: [
               Row(
                 children: [
-                  Text(
+                  Semantics(
+                    header: true,
+                    label: 'Goals Screen',
+                    child: Text(
                     'Goals',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  ),
                   const Spacer(),
-                  FilledButton.icon(
-                    onPressed: () => _openCreateGoalSheet(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('New Goal'),
+                  Semantics(
+                    button: true,
+                    label: 'Create new goal',
+                    child:FilledButton.icon(
+                      onPressed: () => _openCreateGoalSheet(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('New Goal'),
+                    ),
                   ),
                 ],
               ),
@@ -377,7 +385,7 @@ class _AttachTaskSheetState extends State<_AttachTaskSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedStepId,
+            initialValue: _selectedStepId,
             decoration: const InputDecoration(labelText: 'Goal step'),
             items: widget.goal.steps
                 .map(
@@ -389,7 +397,7 @@ class _AttachTaskSheetState extends State<_AttachTaskSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedTaskId,
+            initialValue: _selectedTaskId,
             decoration: const InputDecoration(labelText: 'Task'),
             items: widget.tasks
                 .map(
@@ -506,7 +514,7 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
-              value: _priority,
+              initialValue: _priority,
               decoration: const InputDecoration(labelText: 'Priority'),
               items: [
                 for (var value = 1; value <= 10; value++)

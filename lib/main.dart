@@ -21,6 +21,7 @@ import 'providers/game_provider.dart';
 import 'data/services/game_service.dart';
 import 'providers/achievements_provider.dart';
 import 'data/services/achievements_service.dart';
+import 'providers/tts_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +64,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) =>
               AchievementsProvider(AchievementsService(SupabaseService.client)),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => TtsProvider(),
         ),
       ],
       child: const MyApp(),
