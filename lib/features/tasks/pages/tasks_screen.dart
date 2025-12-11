@@ -19,6 +19,7 @@ class _TasksScreenState extends State<TasksScreen> {
 
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  bool _announced = false;
 
   @override
   void initState() {
@@ -37,8 +38,7 @@ class _TasksScreenState extends State<TasksScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-
-  bool _announced = false;
+  }
 
   @override
   void didChangeDependencies() {

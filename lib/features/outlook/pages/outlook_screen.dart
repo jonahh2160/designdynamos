@@ -130,26 +130,26 @@ class _OutlookScreenState extends State<OutlookScreen> {
                           itemCount: days.length,
                           separatorBuilder: (_, __) => const SizedBox(width: 16),
                           itemBuilder: (context, index) {
-                      final day = days[index];
-                        final formattedDate =
-                          DateFormat('EEEE, MMM d').format(day);
-                      final DateTime dayStart = DateTime(day.year, day.month, day.day);
-                      final DateTime dayEnd = dayStart.add(const Duration(days: 1));
+                            final day = days[index];
+                              final formattedDate =
+                                DateFormat('EEEE, MMM d').format(day);
+                            final DateTime dayStart = DateTime(day.year, day.month, day.day);
+                            final DateTime dayEnd = dayStart.add(const Duration(days: 1));
 
-                      final tasksForDay = tasks.where((t) {
-                        if (t.isDone) return false;
-                        final startLocal = t.startDate?.toLocal() ?? t.dueAt?.toLocal();
-                        final start = startLocal != null
-                            ? DateTime(startLocal.year, startLocal.month, startLocal.day)
-                            : null;
-                        if (start == null) return false;
-                        final dueLocal = t.dueAt?.toLocal() ?? startLocal;
-                        final due = dueLocal != null
-                            ? DateTime(dueLocal.year, dueLocal.month, dueLocal.day)
-                            : start;
+                            final tasksForDay = tasks.where((t) {
+                              if (t.isDone) return false;
+                              final startLocal = t.startDate?.toLocal() ?? t.dueAt?.toLocal();
+                              final start = startLocal != null
+                                  ? DateTime(startLocal.year, startLocal.month, startLocal.day)
+                                  : null;
+                              if (start == null) return false;
+                              final dueLocal = t.dueAt?.toLocal() ?? startLocal;
+                              final due = dueLocal != null
+                                  ? DateTime(dueLocal.year, dueLocal.month, dueLocal.day)
+                                  : start;
 
-                        final startsBeforeOrOnDay = !start.isAfter(dayEnd.subtract(const Duration(milliseconds: 1)));
-                        final dueOnOrAfterDay = !due.isBefore(dayStart);
+                              final startsBeforeOrOnDay = !start.isAfter(dayEnd.subtract(const Duration(milliseconds: 1)));
+                              final dueOnOrAfterDay = !due.isBefore(dayStart);
 
                         //Show every day from start through due (inclusive) while not completed.
                         return startsBeforeOrOnDay && dueOnOrAfterDay;
@@ -175,18 +175,16 @@ class _OutlookScreenState extends State<OutlookScreen> {
                             ),
                           ),
                         ),
-                        ),
                       );
-                    },
+                          },
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 ),
               ),
-            ),
-            ),
-            ),
           ],
-      
         ),
       ),
     );
