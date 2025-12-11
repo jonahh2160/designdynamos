@@ -13,7 +13,7 @@ class SupabaseService {
   static Future<AuthResponse> signInWithTestUser() {
     return client.auth.signInWithPassword(
       //elongsworth37@gmail.com or edmundlongsworthwork@gmail.com
-      email: 'edmundlongsworthwork@gmail.com',
+      email: 'elongsworth@murraystate.edu',
       password: 'test321',
     );
   }
