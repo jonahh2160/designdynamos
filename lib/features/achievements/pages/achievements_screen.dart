@@ -1,6 +1,7 @@
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/data/services/achievements_service.dart';
 import 'package:designdynamos/providers/achievements_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -12,6 +13,8 @@ class AchievementsScreen extends StatefulWidget {
 }
 
 class _AchievementsScreenState extends State<AchievementsScreen> {
+  bool _announced = false;
+
   @override
   void initState() {
     super.initState();
@@ -23,10 +26,23 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+    final tts = context.read<TtsProvider>();
+    if (!tts.isEnabled) return;
+    _announced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) tts.speak('Achievements screen');
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<AchievementsProvider>();
     final theme = Theme.of(context);
     final snapshot = provider.snapshot;
+    final tts = context.read<TtsProvider>();
 
     return Scaffold(
       body: Padding(
@@ -38,11 +54,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Achievements',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 30,
+                Semantics(
+                  header: true,
+                  label: 'Achievements screen',
+                  child: Text(
+                    'Achievements',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 30,
+                    ),
                   ),
                 ),
                 if (provider.isLoading)
@@ -89,12 +109,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 children: [
                   Expanded(
                     flex: 10,
-                    child: _LeaderboardCard(entries: snapshot?.leaderboard ?? const []),
+                    child: _LeaderboardCard(entries: snapshot?.leaderboard ?? const [], tts: tts),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 13,
-                    child: _BadgesCard(badges: snapshot?.badges ?? const []),
+                    child: _BadgesCard(badges: snapshot?.badges ?? const [], tts: tts),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -102,6 +122,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                     child: _StreakCard(
                       currentStreak: snapshot?.currentStreak ?? 0,
                       recentDays: snapshot?.recentDays ?? const [],
+                      tts: tts,
                     ),
                   ),
                 ],
@@ -139,12 +160,16 @@ class _CardShell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
+          Semantics(
+            header: true,
+            label: title,
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+            ),
           ),
           const SizedBox(height: 16),
           Expanded(child: child),
@@ -155,9 +180,10 @@ class _CardShell extends StatelessWidget {
 }
 
 class _LeaderboardCard extends StatelessWidget {
-  const _LeaderboardCard({required this.entries});
+  const _LeaderboardCard({required this.entries, required this.tts});
 
   final List<LeaderboardEntry> entries;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
@@ -177,14 +203,22 @@ class _LeaderboardCard extends StatelessWidget {
               separatorBuilder: (context, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final entry = entries[index];
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.detailCard,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.sidebarActive.withOpacity(0.8)),
-                  ),
-                  child: Row(
+                final label = 'Rank ${index + 1}, ${entry.name}${entry.isCurrentUser ? ", you" : ""}, ${entry.coins} coins';
+                return MouseRegion(
+                  cursor: SystemMouseCursors.basic,
+                  onEnter: (_) {
+                    if (tts.isEnabled) tts.speak(label);
+                  },
+                  child: Semantics(
+                    label: label,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.detailCard,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.sidebarActive.withOpacity(0.8)),
+                      ),
+                      child: Row(
                     children: [
                       _RankIcon(rank: index + 1),
                       const SizedBox(width: 10),
@@ -200,16 +234,18 @@ class _LeaderboardCard extends StatelessWidget {
                               ),
                         ),
                       ),
-                      Text(
-                        entry.coins.toString(),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.monetization_on, color: AppColors.accent),
-                    ],
+                        Text(
+                          entry.coins.toString(),
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.monetization_on, color: AppColors.accent),
+                      ],
+                    ),
+                  ),
                   ),
                 );
               },
@@ -219,9 +255,10 @@ class _LeaderboardCard extends StatelessWidget {
 }
 
 class _BadgesCard extends StatelessWidget {
-  const _BadgesCard({required this.badges});
+  const _BadgesCard({required this.badges, required this.tts});
 
   final List<AchievementBadge> badges;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +283,7 @@ class _BadgesCard extends StatelessWidget {
               itemCount: badges.length,
               itemBuilder: (context, index) {
                 final badge = badges[index];
-                return _BadgeTile(badge: badge);
+                return _BadgeTile(badge: badge, tts: tts);
               },
             ),
     );
@@ -257,10 +294,12 @@ class _StreakCard extends StatelessWidget {
   const _StreakCard({
     required this.currentStreak,
     required this.recentDays,
+    required this.tts,
   });
 
   final int currentStreak;
   final List<DayStreakStatus> recentDays;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
@@ -270,11 +309,20 @@ class _StreakCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$currentStreak day${currentStreak == 1 ? '' : 's'}',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
+          MouseRegion(
+            cursor: SystemMouseCursors.basic,
+            onEnter: (_) {
+              if (tts.isEnabled) tts.speak('Current streak, $currentStreak day${currentStreak == 1 ? '' : 's'}');
+            },
+            child: Semantics(
+              label: 'Current streak, $currentStreak day${currentStreak == 1 ? '' : 's'}',
+              child: Text(
+                '$currentStreak day${currentStreak == 1 ? '' : 's'}',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -291,15 +339,24 @@ class _StreakCard extends StatelessWidget {
               separatorBuilder: (context, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final day = recentDays[index];
-                return Row(
-                  children: [
-                    _FlameIcon(
-                      active: day.completed,
-                      isBreak: day.isBreakDay,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
+                final status = day.isBreakDay ? 'break day, streak paused' : (day.completed ? 'completed' : 'not completed');
+                final label = '${day.label}, $status';
+                return MouseRegion(
+                  cursor: SystemMouseCursors.basic,
+                  onEnter: (_) {
+                    if (tts.isEnabled) tts.speak(label);
+                  },
+                  child: Semantics(
+                    label: label,
+                    child: Row(
+                      children: [
+                        _FlameIcon(
+                          active: day.completed,
+                          isBreak: day.isBreakDay,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -316,11 +373,13 @@ class _StreakCard extends StatelessWidget {
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600,
                               ),
-                            ),
-                        ],
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  ),
                 );
               },
             ),
@@ -366,16 +425,25 @@ class _RankIcon extends StatelessWidget {
 }
 
 class _BadgeTile extends StatelessWidget {
-  const _BadgeTile({required this.badge});
+  const _BadgeTile({required this.badge, required this.tts});
 
   final AchievementBadge badge;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final activeColor = badge.earned ? AppColors.taskCardHighlight : AppColors.textMuted;
+    final label = '${badge.title}, ${badge.subtitle}, ${badge.earned ? "obtained" : "not yet obtained"}';
 
-    return Container(
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      onEnter: (_) {
+        if (tts.isEnabled) tts.speak(label);
+      },
+      child: Semantics(
+        label: label,
+        child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.detailCard,
@@ -419,8 +487,10 @@ class _BadgeTile extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
+            ),
+          ],
+        ),
+      ),
       ),
     );
   }

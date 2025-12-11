@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:designdynamos/features/daily_tasks/pages/daily_task_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/providers/task_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -105,18 +106,30 @@ class _DashboardPageState extends State<DashboardPage> {
                         alignment: showLabels
                             ? Alignment.centerRight
                             : Alignment.center,
-                        child: IconButton(
-                          icon: Icon(
-                            isSidebarOpen
-                                ? Icons.arrow_back_ios
-                                : Icons.arrow_forward_ios,
-                            color: AppColors.textMuted,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              isSidebarOpen = !isSidebarOpen;
-                            });
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          onEnter: (_) {
+                            final tts = context.read<TtsProvider>();
+                            final label = isSidebarOpen ? 'Collapse sidebar button' : 'Expand sidebar button';
+                            if (tts.isEnabled) tts.speak(label);
                           },
+                          child: Semantics(
+                            button: true,
+                            label: isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar',
+                            child: IconButton(
+                              icon: Icon(
+                                isSidebarOpen
+                                    ? Icons.arrow_back_ios
+                                    : Icons.arrow_forward_ios,
+                                color: AppColors.textMuted,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  isSidebarOpen = !isSidebarOpen;
+                                });
+                              },
+                            ),
+                          ),
                         ),
                       ),
                       Padding(

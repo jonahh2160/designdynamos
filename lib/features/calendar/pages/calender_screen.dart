@@ -5,7 +5,7 @@ import 'package:designdynamos/ui/widgets/large_box.dart';
 import 'package:designdynamos/providers/task_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
-
+import 'package:designdynamos/providers/tts_provider.dart';
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -15,6 +15,8 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _selectedDay = DateTime.now();
+  bool _announced = false;
+  int _lastTaskCount = -1;
 
   @override
   void initState() {
@@ -24,6 +26,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TaskProvider>().refreshAllTasks();
     });
+  }
+
+   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+
+    final tts = context.read<TtsProvider>();
+    if (tts.isEnabled) {
+      _announced = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) tts.speak('Calendar screen');
+      });
+    }
   }
 
   @override
@@ -60,13 +76,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
-            Text(
-              "Calendar(Shows Tasks due on that day)",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
-            ),
+            Semantics(
+              header: true,
+              label: "Calendar Screen",
+              child: Text(
+                "Calendar(Shows Tasks due on that day)",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 30,
+                    ),
+              ),
+          ),
             const SizedBox(height: 5),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,6 +101,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       setState(() {
                         _selectedDay = selectedDay;
                       });
+                      
+                      // Announce task count when day is selected
+                      final ttsProvider = context.read<TtsProvider>();
+                      final tasksForDay = tasks.where((task) {
+                        final dueLocal = task.dueAt?.toLocal();
+                        if (dueLocal == null) return false;
+                        final dueDate = DateTime(dueLocal.year, dueLocal.month, dueLocal.day);
+                        final selectedDate = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+                        return dueDate == selectedDate;
+                      }).length;
+                      
+                      if (ttsProvider.isEnabled && tasksForDay != _lastTaskCount) {
+                        _lastTaskCount = tasksForDay;
+                        final monthName = _getMonthName(selectedDay.month);
+                        final announcement = tasksForDay == 0
+                            ? 'No tasks for $monthName ${selectedDay.day}'
+                            : '$tasksForDay ${tasksForDay == 1 ? "task" : "tasks"} found for $monthName ${selectedDay.day}';
+                        ttsProvider.speak(announcement);
+                      }
                     },
                   ),
                 ),
@@ -91,35 +130,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   width: 500,
                   child: LargeBox(
                     label: 'Tasks',
-                    child: tasksForSelectedDay.isEmpty
-                        ? const Center(
-                            child: Text(
-                              "No tasks for this day",
-                              style: TextStyle(color: Colors.white70),
+                    child: Semantics(
+                      label: tasksForSelectedDay.isEmpty 
+                          ? 'No tasks for selected day' 
+                          : '${tasksForSelectedDay.length} ${tasksForSelectedDay.length == 1 ? "task" : "tasks"} for selected day',
+                      child: tasksForSelectedDay.isEmpty
+                          ? const Center(
+                              child: Text(
+                                "No tasks for this day",
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            )
+                          : ListView(
+                              children: tasksForSelectedDay
+                                  .map(
+                                    (task) => TaskCard(
+                                      task: task,
+                                      onTap: () {},
+                                      onToggle: null,
+                                      subtaskDone: context
+                                          .read<TaskProvider>()
+                                          .subtaskProgress(task.id)
+                                          .$1,
+                                      subtaskTotal: context
+                                          .read<TaskProvider>()
+                                          .subtaskProgress(task.id)
+                                          .$2,
+                                      labels: context
+                                          .read<TaskProvider>()
+                                          .labelsOf(task.id),
+                                    ),
+                                  )
+                                  .toList(),
                             ),
-                          )
-                        : ListView(
-                            children: tasksForSelectedDay
-                                .map(
-                                  (task) => TaskCard(
-                                    task: task,
-                                    onTap: () {},
-                                    onToggle: null,
-                                    subtaskDone: context
-                                        .read<TaskProvider>()
-                                        .subtaskProgress(task.id)
-                                        .$1,
-                                    subtaskTotal: context
-                                        .read<TaskProvider>()
-                                        .subtaskProgress(task.id)
-                                        .$2,
-                                    labels: context
-                                        .read<TaskProvider>()
-                                        .labelsOf(task.id),
-                                  ),
-                                )
-                                .toList(),
-                          ),
+                    ),
                   ),
                 ),
               ],
@@ -128,5 +172,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
   }
 }

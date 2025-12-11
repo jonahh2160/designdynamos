@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:designdynamos/core/models/progress_snapshot.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:designdynamos/providers/progress_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +15,8 @@ class ProgressScreen extends StatefulWidget {
 }
 
 class _ProgressScreenState extends State<ProgressScreen> {
+  bool _announced = false;
+
   @override
   void initState() {
     super.initState();
@@ -25,10 +28,27 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+    final tts = context.read<TtsProvider>();
+    print('Progress TTS isEnabled: ${tts.isEnabled}');
+    if (!tts.isEnabled) return;
+    _announced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        print('Speaking: Progress and analytics screen');
+        tts.speak('Progress and analytics screen');
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProgressProvider>();
     final snapshot = provider.snapshot;
     final theme = Theme.of(context);
+    final tts = context.read<TtsProvider>();
 
     final categoryOptions = {
       'All categories',
@@ -48,11 +68,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Text(
-                  'Progress & Analytics',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 30,
+                Semantics(
+                  header: true,
+                  label: 'Progress and analytics screen',
+                  child: Text(
+                    'Progress & Analytics',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 30,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -85,35 +109,62 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   spacing: 8,
                   children: ProgressRange.values.map((range) {
                     final selected = snapshot.range == range;
-                    return ChoiceChip(
-                      label: Text(range.label),
-                      selected: selected,
-                      onSelected: (_) {
-                        context.read<ProgressProvider>().refresh(range: range);
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      onEnter: (_) {
+                        print('Day filter hover: ${range.label}, TTS enabled: ${tts.isEnabled}');
+                        if (tts.isEnabled) tts.speak('${range.label} days filter, ${selected ? "selected" : "not selected"}');
                       },
-                      selectedColor: AppColors.taskCard,
-                      labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: selected ? Colors.black : AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
+                      child: Semantics(
+                        button: true,
+                        selected: selected,
+                        label: '${range.label} days',
+                        onTap: selected ? null : () => context.read<ProgressProvider>().refresh(range: range),
+                        child: ChoiceChip(
+                          label: Text(range.label),
+                          selected: selected,
+                          onSelected: (_) {
+                            context.read<ProgressProvider>().refresh(range: range);
+                          },
+                          selectedColor: AppColors.taskCard,
+                          labelStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: selected ? Colors.black : AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          backgroundColor: AppColors.detailCard,
+                        ),
                       ),
-                      backgroundColor: AppColors.detailCard,
                     );
                   }).toList(),
                 ),
                 const SizedBox(width: 16),
-                DropdownButton<String>(
-                  value: categoryOptions.contains(categoryValue)
-                      ? categoryValue
-                      : 'All categories',
-                  dropdownColor: AppColors.detailCard,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                  items: categoryOptions
-                      .map(
-                        (name) => DropdownMenuItem<String>(
-                          value: name,
-                          child: Text(name),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) {
+                    if (tts.isEnabled) tts.speak('Select category dropdown');
+                  },
+                  child: Semantics(
+                    label: 'Select category filter',
+                    button: true,
+                    child: DropdownButton<String>(
+                      value: categoryOptions.contains(categoryValue)
+                          ? categoryValue
+                          : 'All categories',
+                      dropdownColor: AppColors.detailCard,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                      items: categoryOptions
+                          .map(
+                            (name) => DropdownMenuItem<String>(
+                              value: name,
+                              onTap: () {
+                                if (tts.isEnabled) tts.speak('Category $name');
+                              },
+                          child: Semantics(
+                            label: 'Category $name',
+                            child: Text(name),
+                          ),
                         ),
                       )
                       .toList(),
@@ -125,14 +176,27 @@ class _ProgressScreenState extends State<ProgressScreen> {
                           resetCategory: isReset,
                         );
                   },
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: AppColors.textMuted),
-                  onPressed: provider.isLoading
-                      ? null
-                      : () => context.read<ProgressProvider>().refresh(),
-                  tooltip: 'Refresh analytics',
+                const SizedBox(width: 16),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) {
+                    if (tts.isEnabled) tts.speak('Refresh analytics button');
+                  },
+                  child: Semantics(
+                    button: true,
+                    enabled: !provider.isLoading,
+                    label: 'Refresh analytics',
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh, color: AppColors.textMuted),
+                      onPressed: provider.isLoading
+                          ? null
+                          : () => context.read<ProgressProvider>().refresh(),
+                      tooltip: 'Refresh analytics',
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -181,7 +245,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               Expanded(
                 child: Column(
                   children: [
-                    _MetricsRow(snapshot: snapshot),
+                    _MetricsRow(snapshot: snapshot, tts: tts),
                     const SizedBox(height: 16),
                     Expanded(
                       child: Row(
@@ -215,6 +279,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                   : null,
                               child: _CategoryList(
                                 categories: snapshot.categories,
+                                tts: tts,
                               ),
                             ),
                           ),
@@ -273,9 +338,10 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _MetricsRow extends StatelessWidget {
-  const _MetricsRow({required this.snapshot});
+  const _MetricsRow({required this.snapshot, required this.tts});
 
   final ProgressSnapshot snapshot;
+  final TtsProvider tts;
 
   String _formatPercent(double value) =>
       '${clampPercent(value)}%';
@@ -291,6 +357,7 @@ class _MetricsRow extends StatelessWidget {
             subtitle: 'Tasks finished in range',
             icon: Icons.check_circle,
             color: AppColors.taskCardHighlight,
+            tts: tts,
           ),
         ),
         const SizedBox(width: 12),
@@ -301,6 +368,7 @@ class _MetricsRow extends StatelessWidget {
             subtitle: 'Days with activity',
             icon: Icons.calendar_today,
             color: AppColors.accent,
+            tts: tts,
           ),
         ),
         const SizedBox(width: 12),
@@ -311,6 +379,7 @@ class _MetricsRow extends StatelessWidget {
             subtitle: 'Most tasks in a day',
             icon: Icons.bar_chart,
             color: Colors.lightBlueAccent,
+            tts: tts,
           ),
         ),
         const SizedBox(width: 12),
@@ -321,6 +390,7 @@ class _MetricsRow extends StatelessWidget {
             subtitle: 'Current completion streak',
             icon: Icons.local_fire_department,
             color: Colors.orangeAccent,
+            tts: tts,
           ),
         ),
       ],
@@ -335,6 +405,7 @@ class _MetricCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
+    required this.tts,
   });
 
   final String title;
@@ -342,65 +413,78 @@ class _MetricCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sidebarActive.withOpacity(0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      onEnter: (_) {
+        print('MetricCard hover: $title, TTS enabled: ${tts.isEnabled}');
+        if (tts.isEnabled) {
+          tts.speak('$title, $value, $subtitle');
+        }
+      },
+      child: Semantics(
+        label: '$title, $value, $subtitle',
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.sidebarActive.withOpacity(0.8)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -547,9 +631,10 @@ class _BarChartPainter extends CustomPainter {
 }
 
 class _CategoryList extends StatelessWidget {
-  const _CategoryList({required this.categories});
+  const _CategoryList({required this.categories, required this.tts});
 
   final List<CategorySummary> categories;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
@@ -569,49 +654,59 @@ class _CategoryList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final cat = categories[index];
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.detailCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.sidebarActive.withOpacity(0.8)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        final categoryLabel = '${cat.name}, ${cat.completed} of ${cat.total} tasks completed';
+        return MouseRegion(
+          cursor: SystemMouseCursors.basic,
+          onEnter: (_) {
+            if (tts.isEnabled) tts.speak(categoryLabel);
+          },
+          child: Semantics(
+            label: categoryLabel,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.detailCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.sidebarActive.withOpacity(0.8)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      cat.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  Text(
-                    '${cat.completed}/${cat.total}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          cat.name,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
+                      ),
+                      Text(
+                        '${cat.completed}/${cat.total}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: cat.completionRate.clamp(0, 1),
+                      minHeight: 10,
+                      backgroundColor: AppColors.progressTrack,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.taskCardHighlight,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: cat.completionRate.clamp(0, 1),
-                  minHeight: 10,
-                  backgroundColor: AppColors.progressTrack,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.taskCardHighlight,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },

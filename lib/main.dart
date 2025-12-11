@@ -21,11 +21,15 @@ import 'providers/game_provider.dart';
 import 'data/services/game_service.dart';
 import 'providers/achievements_provider.dart';
 import 'data/services/achievements_service.dart';
+
 import 'providers/progress_provider.dart';
 import 'data/services/progress_service.dart';
 import 'providers/break_day_provider.dart';
 import 'data/services/break_day_service.dart';
 import 'features/auth/pages/login_page.dart';
+
+import 'providers/tts_provider.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,6 +78,9 @@ void main() async {
           create: (_) => ProgressProvider(
             ProgressService(SupabaseService.client, breakDays: breakDayService),
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => TtsProvider(),
         ),
       ],
       child: const MyApp(),

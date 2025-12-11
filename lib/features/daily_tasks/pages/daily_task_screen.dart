@@ -20,7 +20,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/providers/coin_provider.dart';
 import 'package:designdynamos/providers/break_day_provider.dart';
-
+import 'package:designdynamos/providers/tts_provider.dart';
 class DailyTaskScreen extends StatefulWidget {
   const DailyTaskScreen({super.key});
   @override
@@ -30,6 +30,7 @@ class DailyTaskScreen extends StatefulWidget {
 class _DailyTaskScreenState extends State<DailyTaskScreen> {
   bool _isAdding = false;
   StreamSubscription<AuthState>? _authSub;
+  bool _announcedPage = false;
 
   bool _overdueExpanded = true;
   bool _showSuggestions = false;
@@ -183,6 +184,18 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_announcedPage) {
+      final tts = context.read<TtsProvider>();
+      if (tts.isEnabled) {
+        tts.speak('Daily Tasks screen');
+        _announcedPage = true;
+      }
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     //initial fetch after first frame
@@ -273,6 +286,7 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
     final p = context.watch<TaskProvider>();
     final coins = context.watch<CoinProvider>();
     final breakProvider = context.watch<BreakDayProvider>();
+    final tts = context.read<TtsProvider>();
     if (p.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -515,41 +529,60 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ProgressOverview(
-                    completed: finished.length,
-                    total: p.today.length,
-                    coins: coins.totalCoins,
-                    streakLabel:
-                        '${finished.length}/${p.today.length} tasks completed',
+                  MouseRegion(
+                    onEnter: (_) {
+                      final label =
+                          '${finished.length} of ${p.today.length} tasks completed. You have ${coins.totalCoins} coins.';
+                      if (tts.isEnabled) tts.speak(label);
+                    },
+                    child: Semantics(
+                      header: true,
+                      label:
+                          '${finished.length} of ${p.today.length} tasks completed. You have ${coins.totalCoins} coins.',
+                      child: ProgressOverview(
+                        completed: finished.length,
+                        total: p.today.length,
+                        coins: coins.totalCoins,
+                        streakLabel:
+                            '${finished.length}/${p.today.length} tasks completed',
+                      ),
+                    ),
                   ),
                   if (isBreakDay)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.sidebarActive.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.taskCardHighlight.withOpacity(0.6),
-                          ),
-                        ),
-                        child: Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.beach_access,
-                              color: AppColors.taskCardHighlight,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.basic,
+                        onEnter: (_) {
+                          if (tts.isEnabled) tts.speak('Break day notification. Tasks are optional and your streak is paused.');
+                        },
+                        child: Semantics(
+                          label: 'Break day notification. Tasks are optional and your streak is paused.',
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.sidebarActive.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.taskCardHighlight.withOpacity(0.6),
+                              ),
                             ),
-                            Text(
-                              'Break day: tasks are optional and your streak is paused.',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
+                            child: Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.beach_access,
+                                  color: AppColors.taskCardHighlight,
+                                ),
+                                Text(
+                                  'Break day: tasks are optional and your streak is paused.',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
                             TextButton(
                               onPressed: () async {
                                 final messenger = ScaffoldMessenger.of(context);
@@ -566,8 +599,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 }
                               },
                               child: const Text('Resume'),
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
+                        ),
                         ),
                       ),
                     ),
@@ -576,13 +611,24 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          DateFormat('MMMM d').format(p.day),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.basic,
+                          onEnter: (_) {
+                            final dateLabel = DateFormat('EEEE, MMMM d, yyyy').format(p.day);
+                            if (tts.isEnabled) tts.speak('Today is $dateLabel');
+                          },
+                          child: Semantics(
+                            header: true,
+                            label: DateFormat('EEEE, MMMM d, yyyy').format(p.day),
+                            child: Text(
+                              DateFormat('MMMM d').format(p.day),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -597,25 +643,58 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                               runSpacing: 8,
                               alignment: WrapAlignment.end,
                               children: [
-                                ActionChipButton(
-                                  icon: Icons.auto_awesome,
-                                  label:
-                                      _showSuggestions ? 'Hide suggestions' : 'Suggestions',
-                                  onTap: () {
-                                    setState(() {
-                                      _showSuggestions = !_showSuggestions;
-                                    });
+                                MouseRegion(
+                                  onEnter: (_) {
+                                    final label = _showSuggestions
+                                        ? 'Hide suggestions button'
+                                        : 'Show suggestions button';
+                                    if (tts.isEnabled) tts.speak(label);
                                   },
+                                  child: Semantics(
+                                    label: _showSuggestions
+                                        ? 'Hide suggestions button'
+                                        : 'Show suggestions button',
+                                    button: true,
+                                    child: ActionChipButton(
+                                      icon: Icons.auto_awesome,
+                                      label: _showSuggestions
+                                          ? 'Hide suggestions'
+                                          : 'Suggestions',
+                                      onTap: () {
+                                        setState(() {
+                                          _showSuggestions = !_showSuggestions;
+                                        });
+                                      },
+                                    ),
+                                  ),
                                 ),
-                                ActionChipButton(
-                                  icon: Icons.add,
-                                  label: 'Add task',
-                                  onTap: _handleAddTask,
+                                MouseRegion(
+                                  onEnter: (_) {
+                                    if (tts.isEnabled) tts.speak('Add task button');
+                                  },
+                                  child: Semantics(
+                                    label: 'Add task button',
+                                    button: true,
+                                    child: ActionChipButton(
+                                      icon: Icons.add,
+                                      label: 'Add task',
+                                      onTap: _handleAddTask,
+                                    ),
+                                  ),
                                 ),
-                                ActionChipButton(
-                                  icon: Icons.filter_list,
-                                  label: 'Filter',
-                                  onTap: _openFilterSheet,
+                                MouseRegion(
+                                  onEnter: (_) {
+                                    if (tts.isEnabled) tts.speak('Filter tasks button');
+                                  },
+                                  child: Semantics(
+                                    label: 'Filter tasks button',
+                                    button: true,
+                                    child: ActionChipButton(
+                                      icon: Icons.filter_list,
+                                      label: 'Filter',
+                                      onTap: _openFilterSheet,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -626,45 +705,60 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                   ),
                   const SizedBox(height: 16),
                   const SizedBox(height: 12),
-                          ExpansionTile(
-                            key: const PageStorageKey('overdueTasks'),
-                            initiallyExpanded: _overdueExpanded,
-                            onExpansionChanged: (expanded) {
-                              setState(() {
-                                _overdueExpanded = expanded;
-                              });
-                            },
-                            leading: Icon(
-                              p.overdueTasks.isNotEmpty ? Icons.warning : Icons.check_circle,
-                              color: p.overdueTasks.isNotEmpty ? Colors.red : Colors.green,
-                            ),
-                            title: Text(
-                              p.overdueTasks.isNotEmpty
-                                  ? 'Overdue assignments need attention!'
-                                  : 'No overdue assignments',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            children: [
-                              if (p.overdueTasks.isNotEmpty)
-                                for (final overdue in p.overdueTasks)
-                                  OverdueTaskAlert(
-                                    task: overdue,
-                                    onDelete: (task) async => await p.deleteTask(task.id),
-                                    onComplete: (task) async => await p.toggleDone(task.id, true),
-                                    onMoveDate: (task) async {
-                                      final picked = await showDatePicker(
-                                        context: context,
-                                        initialDate: DateTime.now(),
-                                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                                      );
-                                      if (picked != null) {
-                                        await p.updateTask(task.id, dueDatePart: picked);
-                                      }
-                                    }
-                                  ),
-                            ],
-                          ),
+                  MouseRegion(
+                    onEnter: (_) {
+                      final label = p.overdueTasks.isNotEmpty
+                          ? 'Overdue section. ${p.overdueTasks.length} overdue tasks. Expand to view.'
+                          : 'No overdue tasks.';
+                      if (tts.isEnabled) tts.speak(label);
+                    },
+                    child: Semantics(
+                      container: true,
+                      label: p.overdueTasks.isNotEmpty
+                          ? 'Overdue section. ${p.overdueTasks.length} overdue tasks.'
+                          : 'No overdue tasks.',
+                      child: ExpansionTile(
+                        key: const PageStorageKey('overdueTasks'),
+                        initiallyExpanded: _overdueExpanded,
+                        onExpansionChanged: (expanded) {
+                          setState(() {
+                            _overdueExpanded = expanded;
+                          });
+                        },
+                        leading: Icon(
+                          p.overdueTasks.isNotEmpty ? Icons.warning : Icons.check_circle,
+                          color: p.overdueTasks.isNotEmpty ? Colors.red : Colors.green,
+                        ),
+                        title: Text(
+                          p.overdueTasks.isNotEmpty
+                              ? 'Overdue assignments need attention!'
+                              : 'No overdue assignments',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        children: [
+                          if (p.overdueTasks.isNotEmpty)
+                            for (final overdue in p.overdueTasks)
+                              OverdueTaskAlert(
+                                tts: context.read<TtsProvider>(),
+                                task: overdue,
+                                onDelete: (task) async => await p.deleteTask(task.id),
+                                onComplete: (task) async => await p.toggleDone(task.id, true),
+                                onMoveDate: (task) async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: DateTime.now(),
+                                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                                  );
+                                  if (picked != null) {
+                                    await p.updateTask(task.id, dueDatePart: picked);
+                                  }
+                                },
+                              ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Expanded(
                     child: SingleChildScrollView(
@@ -715,8 +809,18 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                           const SizedBox(height: 16),
 
 
-                          FinishedSectionHeader(
-                            title: 'Finished - ${finished.length}',
+                          MouseRegion(
+                            onEnter: (_) {
+                              final label = 'Finished section. ${finished.length} tasks completed.';
+                              if (tts.isEnabled) tts.speak(label);
+                            },
+                            child: Semantics(
+                              label: 'Finished section. ${finished.length} tasks completed.',
+                              header: true,
+                              child: FinishedSectionHeader(
+                                title: 'Finished - ${finished.length}',
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           for (final task in finished)
@@ -737,9 +841,18 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                               labels: p.labelsOf(task.id),
                             ),
                           const SizedBox(height: 16),
-                          AddTaskCard(
-                            onPressed: _handleAddTask,
-                            isLoading: _isAdding || p.isCreating,
+                          MouseRegion(
+                            onEnter: (_) {
+                              if (tts.isEnabled) tts.speak('Add new task');
+                            },
+                            child: Semantics(
+                              label: 'Add new task',
+                              button: true,
+                              child: AddTaskCard(
+                                onPressed: _handleAddTask,
+                                isLoading: _isAdding || p.isCreating,
+                              ),
+                            ),
                           ),
                         ],
                       ),

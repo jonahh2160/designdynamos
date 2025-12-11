@@ -3,6 +3,7 @@ import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:designdynamos/core/models/db_subtask.dart';
+import 'package:provider/provider.dart';
 
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
@@ -11,6 +12,7 @@ import 'package:designdynamos/features/daily_tasks/widgets/icon_container.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/status_pip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
 import 'package:designdynamos/features/daily_tasks/utils/estimate_formatter.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 
 class TaskDetailPanel extends StatelessWidget {
   const TaskDetailPanel({
@@ -62,18 +64,23 @@ class TaskDetailPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tts = context.read<TtsProvider>();
+
     if (task == null) {
-      return Container(
-        decoration: BoxDecoration(
-          color: AppColors.detailCard,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          'Select a task to view its details.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+      return Semantics(
+        label: 'No task selected. Select a task to view its details.',
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.detailCard,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Select a task to view its details.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
         ),
       );
     }
@@ -94,130 +101,180 @@ class TaskDetailPanel extends StatelessWidget {
     final estimateLabel = task!.estimatedMinutes != null
         ? formatEstimateLabel(task!.estimatedMinutes!)
         : 'Add estimate';
+    final panelIntro =
+        'Task details. All fields are editable. Select a tile to edit dates, times, estimate, priority, labels, subtasks, or notes.';
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           //Header + actions
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.detailCard,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            padding: const EdgeInsets.all(20),
-            width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+          MouseRegion(
+            onEnter: (_) {
+              if (tts.isEnabled) tts.speak(panelIntro);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.detailCard,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              child: Semantics(
+                label: 'Task details for ${task!.title}. Status: ${task!.isDone ? 'Completed' : 'In progress'}. $panelIntro',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    GestureDetector(
-                      onTap: () => onToggleComplete(!task!.isDone),
-                      child: StatusPip(isCompleted: task!.isDone),
-                    ),
-                    const SizedBox(width: 12),
-                    IconContainer(icon: iconData, isCompleted: task!.isDone),
-                    const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          task!.title,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: true,
+                        GestureDetector(
+                          onTap: () => onToggleComplete(!task!.isDone),
+                          child: StatusPip(isCompleted: task!.isDone),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          task!.isDone ? 'Completed' : 'In progress',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        IconButton(
-                          tooltip: task!.isDone
-                              ? 'Mark incomplete'
-                              : 'Mark complete',
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.all(6),
-                          onPressed: () => onToggleComplete(!task!.isDone),
-                          icon: Icon(
-                            task!.isDone
-                                ? Icons.undo_rounded
-                                : Icons.check_circle_outline,
-                            color: AppColors.textSecondary,
+                        const SizedBox(width: 12),
+                        IconContainer(icon: iconData, isCompleted: task!.isDone),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                task!.title,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: true,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                task!.isDone ? 'Completed' : 'In progress',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ],
                           ),
                         ),
-                        IconButton(
-                          tooltip: 'Delete task',
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.all(6),
-                          onPressed: () async {
-                            final ok =
-                                await showDialog<bool>(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Delete task?'),
-                                    content: const Text(
-                                      'This cannot be undone.',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                final label = task!.isDone ? 'Mark incomplete button' : 'Mark complete button';
+                                if (tts.isEnabled) tts.speak(label);
+                              },
+                              child: Semantics(
+                                button: true,
+                                label: task!.isDone ? 'Mark incomplete' : 'Mark complete',
+                                child: IconButton(
+                                  tooltip: task!.isDone
+                                      ? 'Mark incomplete'
+                                      : 'Mark complete',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(6),
+                                  onPressed: () => onToggleComplete(!task!.isDone),
+                                  icon: Icon(
+                                    task!.isDone
+                                        ? Icons.undo_rounded
+                                        : Icons.check_circle_outline,
+                                    color: AppColors.textSecondary,
                                   ),
-                                ) ??
-                                false;
-                            if (ok) await onDeleteTask();
-                          },
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Hide details',
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.all(6),
-                          onPressed: onClose,
-                          icon: const Icon(
-                            Icons.close,
-                            color: AppColors.textSecondary,
-                          ),
+                                ),
+                              ),
+                            ),
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                if (tts.isEnabled) tts.speak('Delete task button');
+                              },
+                              child: Semantics(
+                                button: true,
+                                label: 'Delete task',
+                                child: IconButton(
+                                  tooltip: 'Delete task',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(6),
+                                  onPressed: () async {
+                                final ok =
+                                    await showDialog<bool>(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text('Delete task?'),
+                                        content: const Text(
+                                          'This cannot be undone.',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    ) ??
+                                    false;
+                                if (ok) await onDeleteTask();
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                if (tts.isEnabled) tts.speak('Close details panel button');
+                              },
+                              child: Semantics(
+                                button: true,
+                                label: 'Close details panel',
+                                child: IconButton(
+                                  tooltip: 'Hide details',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(6),
+                                  onPressed: onClose,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
                 _DetailTile(
                   icon: Icons.flag_outlined,
                   title: 'Target date',
                   value: targetDateLabel,
+                  semanticsLabel: 'Target date: $targetDateLabel',
                   trailing: task!.targetAt != null
-                      ? IconButton(
-                          tooltip: 'Clear target date',
-                          onPressed: onClearTargetAt,
-                          icon: const Icon(Icons.close),
+                      ? MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          onEnter: (_) {
+                            if (tts.isEnabled) tts.speak('Clear target date button');
+                          },
+                          child: Semantics(
+                            button: true,
+                            label: 'Clear target date',
+                            child: IconButton(
+                              tooltip: 'Clear target date',
+                              onPressed: onClearTargetAt,
+                              icon: const Icon(Icons.close),
+                            ),
+                          ),
                         )
                       : null,
                   onTap: () async {
@@ -242,6 +299,7 @@ class TaskDetailPanel extends StatelessWidget {
                   icon: Icons.access_alarm_outlined,
                   title: 'Target time',
                   value: targetTimeLabel,
+                  semanticsLabel: 'Target time: $targetTimeLabel',
                   onTap: () async {
                     final now = DateTime.now();
                     final initial = task!.targetAt ?? task!.dueAt ?? now;
@@ -262,6 +320,7 @@ class TaskDetailPanel extends StatelessWidget {
                   icon: Icons.calendar_today_outlined,
                   title: 'Due date',
                   value: dueDateLabel,
+                  semanticsLabel: 'Due date: $dueDateLabel',
                   onTap: () async {
                     final now = DateTime.now();
                     final initial = task!.dueAt ?? now;
@@ -284,6 +343,7 @@ class TaskDetailPanel extends StatelessWidget {
                   icon: Icons.access_time,
                   title: 'Due time',
                   value: dueTimeLabel,
+                  semanticsLabel: 'Due time: $dueTimeLabel',
                   onTap: () async {
                     final now = DateTime.now();
                     final initial = task!.dueAt ?? now;
@@ -363,135 +423,170 @@ class TaskDetailPanel extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                _PriorityTile(
-                  priority: task!.priority,
-                  onPriorityChange: onPriorityChange,
+                MouseRegion(
+                  onEnter: (_) {
+                    if (tts.isEnabled) tts.speak('Priority level ${task!.priority}');
+                  },
+                  child: Semantics(
+                    label: 'Priority level ${task!.priority}',
+                    child: _PriorityTile(
+                      priority: task!.priority,
+                      onPriorityChange: onPriorityChange,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
+          ),
+          ),
           const SizedBox(height: 16),
           //Labels and quick chips
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.detailCard,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            padding: const EdgeInsets.all(20),
-            width: double.infinity,
-            child: _LabelsEditor(
-              labels: labels,
-              dueToday:
-                  task!.dueAt != null &&
-                  DateUtils.isSameDay(task!.dueAt, DateTime.now()),
-              onAdd: (name) => onToggleLabel(name, true),
-              onRemove: (name) => onToggleLabel(name, false),
-              priority: task!.priority,
+          MouseRegion(
+            onEnter: (_) {
+              if (tts.isEnabled) tts.speak('Labels section with ${labels.length} labels');
+            },
+            child: Semantics(
+              label: 'Labels section',
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.detailCard,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                padding: const EdgeInsets.all(20),
+                width: double.infinity,
+                child: _LabelsEditor(
+                  labels: labels,
+                  dueToday:
+                      task!.dueAt != null &&
+                      DateUtils.isSameDay(task!.dueAt, DateTime.now()),
+                  onAdd: (name) => onToggleLabel(name, true),
+                  onRemove: (name) => onToggleLabel(name, false),
+                  priority: task!.priority,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
           //Subtasks list
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.detailCard,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            padding: const EdgeInsets.all(20),
-            width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Subtasks',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+          MouseRegion(
+            onEnter: (_) {
+              if (tts.isEnabled) tts.speak('Subtasks section with ${subtasks.length} subtasks');
+            },
+            child: Semantics(
+              label: 'Subtasks section',
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.detailCard,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                const SizedBox(height: 12),
-                for (final s in subtasks) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.subtaskBackground,
-                      borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.all(20),
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Subtasks',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => onToggleSubtask(s.id, !s.isDone),
-                          icon: Icon(
-                            s.isDone
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked_outlined,
-                            color: s.isDone
-                                ? AppColors.accent
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            s.title,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  decoration: s.isDone
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
+                    const SizedBox(height: 12),
+                    for (final s in subtasks) ...[
+                      MouseRegion(
+                        onEnter: (_) {
+                          if (tts.isEnabled) tts.speak('${s.title}${s.isDone ? ', completed' : ', not completed'}');
+                        },
+                        child: Semantics(
+                          label: '${s.title}${s.isDone ? ', completed' : ', not completed'}',
+                          checked: s.isDone,
+                          child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.subtaskBackground,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () => onToggleSubtask(s.id, !s.isDone),
+                                  icon: Icon(
+                                    s.isDone
+                                        ? Icons.check_circle
+                                        : Icons.radio_button_unchecked_outlined,
+                                    color: s.isDone
+                                        ? AppColors.accent
+                                        : AppColors.textSecondary,
+                                  ),
                                 ),
+                                Expanded(
+                                  child: Text(
+                                    s.title,
+                                    style: Theme.of(context).textTheme.bodyMedium
+                                        ?.copyWith(
+                                          decoration: s.isDone
+                                              ? TextDecoration.lineThrough
+                                              : TextDecoration.none,
+                                        ),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => onDeleteSubtask(s.id),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () => onDeleteSubtask(s.id),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () async {
-                    final title = await showDialog<String>(
-                      context: context,
-                      builder: (ctx) {
-                        final c = TextEditingController();
-                        return AlertDialog(
-                          title: const Text('Add subtask'),
-                          content: TextField(
-                            controller: c,
-                            autofocus: true,
-                            decoration: const InputDecoration(
-                              hintText: 'Subtask title',
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () =>
-                                  Navigator.pop(ctx, c.text.trim()),
-                              child: const Text('Add'),
-                            ),
-                          ],
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final title = await showDialog<String>(
+                          context: context,
+                          builder: (ctx) {
+                            final c = TextEditingController();
+                            return AlertDialog(
+                              title: const Text('Add subtask'),
+                              content: TextField(
+                                controller: c,
+                                autofocus: true,
+                                decoration: const InputDecoration(
+                                  hintText: 'Subtask title',
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      Navigator.pop(ctx, c.text.trim()),
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            );
+                          },
                         );
+                        if (title != null && title.isNotEmpty) {
+                          await onAddSubtask(title);
+                        }
                       },
-                    );
-                    if (title != null && title.isNotEmpty) {
-                      await onAddSubtask(title);
-                    }
-                  },
-                  icon: const Icon(Icons.add, color: AppColors.textSecondary),
-                  label: const Text('Add subtask'),
+                      icon: const Icon(Icons.add, color: AppColors.textSecondary),
+                      label: const Text('Add subtask'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -503,7 +598,24 @@ class TaskDetailPanel extends StatelessWidget {
             ),
             padding: const EdgeInsets.all(20),
             width: double.infinity,
-            child: _NotesEditor(initial: note, onSave: onSaveNote),
+            child: Builder(
+              builder: (context) {
+                final tts = context.read<TtsProvider>();
+                final notesLabel = note?.isNotEmpty == true
+                    ? 'Notes: ${note!.replaceAll('\n', ' ')}'
+                    : 'No notes yet. Add notes';
+
+                return MouseRegion(
+                  onEnter: (_) {
+                    if (tts.isEnabled) tts.speak(notesLabel);
+                  },
+                  child: Semantics(
+                    label: notesLabel,
+                    child: _NotesEditor(initial: note, onSave: onSaveNote),
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 16),
           Container(
@@ -541,6 +653,7 @@ class _DetailTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
+    this.semanticsLabel,
     this.onTap,
     this.trailing,
   });
@@ -548,46 +661,59 @@ class _DetailTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
+  final String? semanticsLabel;
   final VoidCallback? onTap;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.textSecondary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary.withValues(alpha: 0.8),
-                      ),
+    final tts = context.read<TtsProvider>();
+    final label = semanticsLabel ?? '$title: $value';
+
+    return MouseRegion(
+      onEnter: (_) {
+        if (tts.isEnabled) tts.speak(label);
+      },
+      child: Semantics(
+        label: label,
+        button: onTap != null,
+        child: Material(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(icon, color: AppColors.textSecondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          value,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      value,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  if (trailing != null) trailing!,
+                ],
               ),
-              if (trailing != null) trailing!,
-            ],
+            ),
           ),
         ),
       ),

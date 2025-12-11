@@ -1,6 +1,8 @@
 import 'package:designdynamos/core/models/nav_item_data.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SidebarButton extends StatelessWidget {
   const SidebarButton({
@@ -20,10 +22,21 @@ class SidebarButton extends StatelessWidget {
     final Color iconColor = active
         ? AppColors.textPrimary
         : AppColors.textSecondary.withOpacity(isSecondary ? 0.6 : 0.8);
+    final tts = context.read<TtsProvider>();
+    final label = '${item.label} ${active ? "selected" : ""} tab button${item.badge != null ? ", ${item.badge} items" : ""}';
 
-    final Widget button = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
+    final Widget button = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        if (tts.isEnabled) tts.speak(label);
+      },
+      child: Semantics(
+        button: true,
+        selected: active,
+        label: label,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Container(
         decoration: BoxDecoration(
           color: active ? AppColors.sidebarActive : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
@@ -74,6 +87,8 @@ class SidebarButton extends StatelessWidget {
                 ),
             ],
           ],
+        ),
+      ),
         ),
       ),
     );

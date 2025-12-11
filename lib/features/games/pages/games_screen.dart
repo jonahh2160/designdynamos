@@ -3,17 +3,38 @@ import 'package:designdynamos/features/games/models/game_info.dart';
 import 'package:designdynamos/features/games/pages/pixel_adventure_screen.dart';
 import 'package:designdynamos/providers/coin_provider.dart';
 import 'package:designdynamos/providers/game_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class GamesScreen extends StatelessWidget {
+class GamesScreen extends StatefulWidget {
   const GamesScreen({super.key});
+
+  @override
+  State<GamesScreen> createState() => _GamesScreenState();
+}
+
+class _GamesScreenState extends State<GamesScreen> {
+  bool _announced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+    final tts = context.read<TtsProvider>();
+    if (!tts.isEnabled) return;
+    _announced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) tts.speak('Games screen');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final coinsProvider = context.watch<CoinProvider>();
     final gameProvider = context.watch<GameProvider>();
     final games = gameProvider.games;
+    final tts = context.read<TtsProvider>();
 
     return Scaffold(
       body: SafeArea(
@@ -30,7 +51,7 @@ class GamesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _GamesHeader(progress: 0.62, coins: coinsProvider.totalCoins),
+                _GamesHeader(progress: 0.62, coins: coinsProvider.totalCoins, tts: tts),
                 const SizedBox(height: 24),
                 if (gameProvider.error != null)
                   _ErrorBanner(message: gameProvider.error!),
@@ -72,6 +93,7 @@ class GamesScreen extends StatelessWidget {
                             isPlaying: gameProvider.isPlayingGame(game),
                             onUnlock: () => _handleUnlock(context, game),
                             onPlay: () => _handlePlay(context, game),
+                            tts: tts,
                           );
                         },
                       );
@@ -133,26 +155,34 @@ class GamesScreen extends StatelessWidget {
 }
 
 class _GamesHeader extends StatelessWidget {
-  const _GamesHeader({required this.progress, required this.coins});
+  const _GamesHeader({required this.progress, required this.coins, required this.tts});
 
   final double progress;
   final int coins;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: AppColors.sidebarActive.withOpacity(0.6),
-              ),
-            ),
-            child: Stack(
+          child: MouseRegion(
+            cursor: SystemMouseCursors.basic,
+            onEnter: (_) {
+              if (tts.isEnabled) tts.speak('XP progress, ${(progress * 100).toStringAsFixed(0)} percent until next reward');
+            },
+            child: Semantics(
+              label: 'XP progress, ${(progress * 100).toStringAsFixed(0)} percent until next reward',
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppColors.sidebarActive.withOpacity(0.6),
+                  ),
+                ),
+                child: Stack(
               alignment: Alignment.center,
               children: [
                 SizedBox(
@@ -184,20 +214,23 @@ class _GamesHeader extends StatelessWidget {
                   ],
                 ),
               ],
+              ),
+            ),
             ),
           ),
         ),
         const SizedBox(width: 16),
-        _CoinPill(coins: coins),
+        _CoinPill(coins: coins, tts: tts),
       ],
     );
   }
 }
 
 class _CoinPill extends StatelessWidget {
-  const _CoinPill({required this.coins});
+  const _CoinPill({required this.coins, required this.tts});
 
   final int coins;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
@@ -205,8 +238,16 @@ class _CoinPill extends StatelessWidget {
       fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
     );
+    final label = 'You have $coins coins';
 
-    return Container(
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      onEnter: (_) {
+        if (tts.isEnabled) tts.speak(label);
+      },
+      child: Semantics(
+        label: label,
+        child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -226,7 +267,9 @@ class _CoinPill extends StatelessWidget {
           Text(coins.toString(), style: textStyle),
           const SizedBox(width: 6),
           const Icon(Icons.monetization_on, color: AppColors.accent),
-        ],
+          ],
+        ),
+      ),
       ),
     );
   }
@@ -241,6 +284,7 @@ class GameCard extends StatelessWidget {
     required this.isPlaying,
     required this.onUnlock,
     required this.onPlay,
+    required this.tts,
   });
 
   final GameInfo game;
@@ -249,6 +293,7 @@ class GameCard extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onUnlock;
   final VoidCallback onPlay;
+  final TtsProvider tts;
 
   @override
   Widget build(BuildContext context) {
@@ -257,9 +302,19 @@ class GameCard extends StatelessWidget {
     final isUnlocked = game.isUnlocked || isAlwaysAvailable;
     final showUnlock = game.unlockable && !isUnlocked;
     final canAfford = userCoins >= game.coinCost;
+    final status = isUnlocked ? 'unlocked' : (canAfford ? 'can unlock' : 'locked, need ${game.coinCost - userCoins} more coins');
+    final label = '${game.title}, ${game.description}, ${game.coinCost} coins needed, $status';
 
-    return Container(
-      decoration: BoxDecoration(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        if (tts.isEnabled) tts.speak(label);
+      },
+      child: Semantics(
+        label: label,
+        button: true,
+        child: Container(
+          decoration: BoxDecoration(
         color: AppColors.detailCard,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
@@ -363,6 +418,8 @@ class GameCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import 'package:designdynamos/core/models/task_draft.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
@@ -10,6 +11,9 @@ import 'package:designdynamos/features/daily_tasks/widgets/tag_chip.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_icon_picker.dart';
 import 'package:designdynamos/providers/break_day_provider.dart';
 import 'package:provider/provider.dart';
+
+import 'package:designdynamos/providers/tts_provider.dart';
+
 
 class AddTaskDialog extends StatefulWidget {
   const AddTaskDialog({super.key});
@@ -162,6 +166,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final tts = context.read<TtsProvider>();
     return AlertDialog(
       backgroundColor: AppColors.surface,
       title: Text(
@@ -176,35 +181,71 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _titleController,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                hintText: 'Task title',
-                errorText: _errorText,
+            MouseRegion(
+              onEnter: (_) {
+                if (tts.isEnabled) tts.speak('Task title input');
+              },
+              child: Semantics(
+                label: 'Task title input',
+                child: TextField(
+                  controller: _titleController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: 'Task title',
+                    errorText: _errorText,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _pickDueDate,
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    label: Text(
-                      _dueAt != null ? _formattedDate(_dueAt!) : 'Add due date',
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      final label = _dueAt != null
+                          ? 'Due date ${_formattedDate(_dueAt!)}'
+                          : 'Add due date';
+                      if (tts.isEnabled) tts.speak(label);
+                    },
+                    child: Semantics(
+                      label: _dueAt != null
+                          ? 'Due date ${_formattedDate(_dueAt!)}'
+                          : 'Add due date',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed: _pickDueDate,
+                        icon: const Icon(Icons.calendar_today_outlined),
+                        label: Text(
+                          _dueAt != null ? _formattedDate(_dueAt!) : 'Add due date',
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _pickDueTime,
-                    icon: const Icon(Icons.access_time),
-                    label: Text(
-                      _dueAt != null ? _formattedTime(_dueAt!) : 'Add due time',
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      final label = _dueAt != null
+                          ? 'Due time ${_formattedTime(_dueAt!)}'
+                          : 'Add due time';
+                      if (tts.isEnabled) tts.speak(label);
+                    },
+                    child: Semantics(
+                      label: _dueAt != null
+                          ? 'Due time ${_formattedTime(_dueAt!)}'
+                          : 'Add due time',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed: _pickDueTime,
+                        icon: const Icon(Icons.access_time),
+                        label: Text(
+                          _dueAt != null ? _formattedTime(_dueAt!) : 'Add due time',
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -214,70 +255,98 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final initial = (_targetAt ?? _dueAt ?? now).toLocal();
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: initial,
-                        firstDate: DateTime(now.year - 1),
-                        lastDate: DateTime(now.year + 5),
-                        helpText: 'Select target date',
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          final current = _targetAt ?? _dueAt ?? now;
-                          _targetAt = DateTime(
-                            picked.year,
-                            picked.month,
-                            picked.day,
-                            current.hour,
-                            current.minute,
-                          );
-                        });
-                      }
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      final label = _targetAt != null
+                          ? 'Target date ${_formattedDate(_targetAt!)}'
+                          : 'Add target date';
+                      if (tts.isEnabled) tts.speak(label);
                     },
-                    icon: const Icon(Icons.flag_outlined),
-                    label: Text(
-                      _targetAt != null
-                          ? _formattedDate(_targetAt!)
+                    child: Semantics(
+                      label: _targetAt != null
+                          ? 'Target date ${_formattedDate(_targetAt!)}'
                           : 'Add target date',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final now = DateTime.now();
+                          final initial = (_targetAt ?? _dueAt ?? now).toLocal();
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: initial,
+                            firstDate: DateTime(now.year - 1),
+                            lastDate: DateTime(now.year + 5),
+                            helpText: 'Select target date',
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              final current = _targetAt ?? _dueAt ?? now;
+                              _targetAt = DateTime(
+                                picked.year,
+                                picked.month,
+                                picked.day,
+                                current.hour,
+                                current.minute,
+                              );
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.flag_outlined),
+                        label: Text(
+                          _targetAt != null
+                              ? _formattedDate(_targetAt!)
+                              : 'Add target date',
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final base = (_targetAt ?? _dueAt ?? now).toLocal();
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay(
-                          hour: base.hour,
-                          minute: base.minute,
-                        ),
-                        helpText: 'Select target time',
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          final currentDate = _targetAt ?? _dueAt ?? now;
-                          _targetAt = DateTime(
-                            currentDate.year,
-                            currentDate.month,
-                            currentDate.day,
-                            picked.hour,
-                            picked.minute,
-                          );
-                        });
-                      }
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      final label = _targetAt != null
+                          ? 'Target time ${_formattedTime(_targetAt!)}'
+                          : 'Add target time';
+                      if (tts.isEnabled) tts.speak(label);
                     },
-                    icon: const Icon(Icons.access_alarm_outlined),
-                    label: Text(
-                      _targetAt != null
-                          ? _formattedTime(_targetAt!)
+                    child: Semantics(
+                      label: _targetAt != null
+                          ? 'Target time ${_formattedTime(_targetAt!)}'
                           : 'Add target time',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final now = DateTime.now();
+                          final base = (_targetAt ?? _dueAt ?? now).toLocal();
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay(
+                              hour: base.hour,
+                              minute: base.minute,
+                            ),
+                            helpText: 'Select target time',
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              final currentDate = _targetAt ?? _dueAt ?? now;
+                              _targetAt = DateTime(
+                                currentDate.year,
+                                currentDate.month,
+                                currentDate.day,
+                                picked.hour,
+                                picked.minute,
+                              );
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.access_alarm_outlined),
+                        label: Text(
+                          _targetAt != null
+                              ? _formattedTime(_targetAt!)
+                              : 'Add target time',
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -292,25 +361,44 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _estimateController,
-              keyboardType: const TextInputType.numberWithOptions(
-                signed: false,
-                decimal: false,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
-              ],
-              decoration: InputDecoration(
-                hintText: 'Estimate (minutes or H:MM)',
-                errorText: _estimateErrorText,
+            MouseRegion(
+              onEnter: (_) {
+                const label = 'Estimate input. Format in minutes or H colon MM like zero colon thirty';
+                if (tts.isEnabled) tts.speak(label);
+              },
+              child: Semantics(
+                label:
+                    'Estimate input. Format in minutes or H colon MM like zero colon thirty',
+                child: TextField(
+                  controller: _estimateController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    signed: false,
+                    decimal: false,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+                  ],
+                  decoration: InputDecoration(
+                    hintText: 'Estimate (minutes or H:MM)',
+                    errorText: _estimateErrorText,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(hintText: 'Notes (optional)'),
+            MouseRegion(
+              onEnter: (_) {
+                const label = 'Notes input optional';
+                if (tts.isEnabled) tts.speak(label);
+              },
+              child: Semantics(
+                label: 'Notes input optional',
+                child: TextField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(hintText: 'Notes (optional)'),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -325,25 +413,44 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               runSpacing: 8,
               children: [
                 for (final name in _labels)
-                  TagChip(
-                    label: name,
-                    onDeleted: () => setState(() => _labels.remove(name)),
+                  MouseRegion(
+                    onEnter: (_) {
+                      final label = 'Tag $name. Remove button';
+                      if (tts.isEnabled) tts.speak(label);
+                    },
+                    child: Semantics(
+                      label: 'Tag $name. Remove button',
+                      button: true,
+                      child: TagChip(
+                        label: name,
+                        onDeleted: () => setState(() => _labels.remove(name)),
+                      ),
+                    ),
                   ),
                 SizedBox(
                   width: 220,
-                  child: TextField(
-                    controller: _labelInputController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add label and press Enter',
-                    ),
-                    onSubmitted: (value) {
-                      final name = value.trim();
-                      if (name.isEmpty) return;
-                      setState(() {
-                        _labels.add(name);
-                        _labelInputController.clear();
-                      });
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      const label = 'Add tag input. Type a label and press enter';
+                      if (tts.isEnabled) tts.speak(label);
                     },
+                    child: Semantics(
+                      label: 'Add tag input. Type a label and press enter',
+                      child: TextField(
+                        controller: _labelInputController,
+                        decoration: const InputDecoration(
+                          hintText: 'Add label and press Enter',
+                        ),
+                        onSubmitted: (value) {
+                          final name = value.trim();
+                          if (name.isEmpty) return;
+                          setState(() {
+                            _labels.add(name);
+                            _labelInputController.clear();
+                          });
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -356,22 +463,32 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 16),
-                DropdownButton<int>(
-                  value: _priority,
-                  dropdownColor: AppColors.surface,
-                  items: [
-                    for (var value = 1; value <= 10; value++)
-                      DropdownMenuItem(
-                        value: value,
-                        child: Text('Level $value'),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _priority = value;
-                    });
+                MouseRegion(
+                  onEnter: (_) {
+                    final label = 'Priority level $_priority dropdown';
+                    if (tts.isEnabled) tts.speak(label);
                   },
+                  child: Semantics(
+                    label: 'Priority level $_priority dropdown',
+                    button: true,
+                    child: DropdownButton<int>(
+                      value: _priority,
+                      dropdownColor: AppColors.surface,
+                      items: [
+                        for (var value = 1; value <= 10; value++)
+                          DropdownMenuItem(
+                            value: value,
+                            child: Text('Level $value'),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _priority = value;
+                        });
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -403,9 +520,19 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _subtaskControllers[i],
-                      decoration: InputDecoration(hintText: 'Subtask ${i + 1}'),
+                    child: MouseRegion(
+                      onEnter: (_) {
+                        final label = 'Subtask ${i + 1} input';
+                        if (tts.isEnabled) tts.speak(label);
+                      },
+                      child: Semantics(
+                        label: 'Subtask ${i + 1} input',
+                        child: TextField(
+                          controller: _subtaskControllers[i],
+                          decoration:
+                              InputDecoration(hintText: 'Subtask ${i + 1}'),
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(
@@ -422,24 +549,54 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ),
               const SizedBox(height: 8),
             ],
-            TextButton.icon(
-              onPressed: () {
-                setState(
-                  () => _subtaskControllers.add(TextEditingController()),
-                );
+            MouseRegion(
+              onEnter: (_) {
+                const label = 'Add subtask button';
+                if (tts.isEnabled) tts.speak(label);
               },
-              icon: const Icon(Icons.add),
-              label: const Text('Add subtask'),
+              child: Semantics(
+                label: 'Add subtask button',
+                button: true,
+                child: TextButton.icon(
+                  onPressed: () {
+                    setState(
+                      () => _subtaskControllers.add(TextEditingController()),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add subtask'),
+                ),
+              ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+        MouseRegion(
+          onEnter: (_) {
+            const label = 'Cancel button';
+            if (tts.isEnabled) tts.speak(label);
+          },
+          child: Semantics(
+            label: 'Cancel button',
+            button: true,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ),
         ),
-        ElevatedButton(onPressed: _submit, child: const Text('Add')),
+        MouseRegion(
+          onEnter: (_) {
+            const label = 'Add task button';
+            if (tts.isEnabled) tts.speak(label);
+          },
+          child: Semantics(
+            label: 'Add task button',
+            button: true,
+            child: ElevatedButton(onPressed: _submit, child: const Text('Add')),
+          ),
+        ),
       ],
     );
   }
