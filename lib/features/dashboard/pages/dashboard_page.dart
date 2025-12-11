@@ -133,9 +133,9 @@ class _DashboardPageState extends State<DashboardPage> {
                                     ),
                               )
                             : SizedBox.shrink(), //Icon(
-                            //  Icons.add_task,
-                            //  size: 32,
-                            //  color: AppColors.textMuted,
+                            //Icons.add_task,
+                            //size: 32,
+                            //color: AppColors.textMuted,
                             //),
                       ),
                       SizedBox(height: showLabels ? 32 : 24),
