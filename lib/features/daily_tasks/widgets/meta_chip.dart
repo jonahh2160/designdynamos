@@ -52,8 +52,8 @@ class MetaChip extends StatelessWidget {
 }
 
 Color priorityLevelColor(int priority) {
-  const low = Color(0xFF63F7BB); // brighter green for low priority
-  const high = Color(0xFFFF4D4F); // vivid red for high priority
+  const low = Color(0xFF63F7BB); //brighter green for low priority
+  const high = Color(0xFFFF4D4F); //vivid red for high priority
   final clamped = priority.clamp(1, 10);
   final t = ((clamped as num) - 1) / 9;
   return Color.lerp(low, high, t.toDouble()) ?? high;

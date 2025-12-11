@@ -1,19 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:designdynamos/providers/task_provider.dart';
-import 'package:designdynamos/core/models/task_draft.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/core/widgets/action_chip_button.dart';
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
-import 'package:designdynamos/features/daily_tasks/widgets/overdue_task_alert.dart';
 
-class TasksScreen extends StatelessWidget {
+class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
+
+  @override
+  State<TasksScreen> createState() => _TasksScreenState();
+}
+
+class _TasksScreenState extends State<TasksScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    //Warming the cache on first build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<TaskProvider>().refreshAllTasks();
+    });
+    _searchController.addListener(() {
+      setState(() => _query = _searchController.text.trim());
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
     final tasks = taskProvider.allTasks;
+    final filtered = _query.isEmpty
+        ? tasks
+        : tasks.where((task) {
+            final title = task.title.toLowerCase();
+            final notes = (task.notes ?? '').toLowerCase();
+            final q = _query.toLowerCase();
+            return title.contains(q) || notes.contains(q);
+          }).toList();
 
     if (taskProvider.isLoading) {
       return const Scaffold(
@@ -35,23 +67,42 @@ class TasksScreen extends StatelessWidget {
                     fontSize: 30,
                   ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by title or notes',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => _searchController.clear(),
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             Expanded(
               child: Scrollbar(
                 thumbVisibility: true,
                 trackVisibility: true,
-                child: tasks.isEmpty
-                    ? const Center(
+                child: filtered.isEmpty
+                    ? Center(
                         child: Text(
-                          'No tasks available',
-                          style: TextStyle(color: Colors.white70),
+                          _query.isEmpty
+                              ? 'No tasks available'
+                              : 'No tasks match "${_query}"',
+                          style: const TextStyle(color: Colors.white70),
                         ),
                       )
                     : ListView.separated(
-                        itemCount: tasks.length,
+                        itemCount: filtered.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
-                          final task = tasks[index];
+                          final task = filtered[index];
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

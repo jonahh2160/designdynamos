@@ -58,7 +58,7 @@ class AppPages {
     //name: "/",
     //page: () => DashboardPage(),
     //bindings: [
-    //  OverviewBinding(),
+    //OverviewBinding(),
     //],
     //),
   ];

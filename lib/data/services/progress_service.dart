@@ -1,12 +1,17 @@
 import 'dart:math';
 
 import 'package:designdynamos/core/models/progress_snapshot.dart';
+import 'package:designdynamos/data/services/break_day_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProgressService {
-  ProgressService(this._client);
+  ProgressService(
+    this._client, {
+    BreakDayService? breakDays,
+  }) : _breakDays = breakDays ?? BreakDayService(_client);
 
   final SupabaseClient _client;
+  final BreakDayService _breakDays;
 
   Future<ProgressSnapshot> fetch({
     ProgressRange range = ProgressRange.last30,
@@ -36,6 +41,12 @@ class ProgressService {
         .order('day');
 
     final dailySeries = _buildDailySeries(dailyRows, start, now);
+    Set<String> breakDayKeys = {};
+    try {
+      breakDayKeys = await _breakDays.fetchRange(start, now);
+    } catch (_) {
+      breakDayKeys = {};
+    }
 
     //Pull tasks that were due or completed in the range (superset, filtered locally).
     final rawTasks = await _client
@@ -82,16 +93,17 @@ class ProgressService {
         ? dailySeries
         : _buildSeriesFromTasks(filteredTasks, start, now);
 
+    final workingDayCount = max(1, range.days - breakDayKeys.length);
     final consistency = series.isEmpty
         ? 0.0
         : series.where((p) => p.completed > 0).length /
-            max(1, range.days);
+            workingDayCount;
 
     final bestDayCount = series.isEmpty
         ? 0
         : series.map((p) => p.completed).reduce(max);
 
-    final currentStreak = _computeStreak(series);
+    final currentStreak = _computeStreak(series, breakDayKeys);
 
     final totalCompleted = filteredTasks.where((t) {
       final completed = t.completedAt;
@@ -191,7 +203,10 @@ class ProgressService {
     return series;
   }
 
-  int _computeStreak(List<DailyStatPoint> series) {
+  int _computeStreak(
+    List<DailyStatPoint> series,
+    Set<String> breakDays,
+  ) {
     if (series.isEmpty) return 0;
     final Set<String> activeDays = {
       for (final p in series)
@@ -199,14 +214,22 @@ class ProgressService {
     };
     DateTime cursor = DateTime.now();
     int streak = 0;
+    int guard = 0;
     while (true) {
+      if (guard > 365) break; //safety
       final key = DateTime(cursor.year, cursor.month, cursor.day)
           .toIso8601String()
           .split('T')
           .first;
+      if (breakDays.contains(key)) {
+        cursor = cursor.subtract(const Duration(days: 1));
+        guard += 1;
+        continue;
+      }
       if (activeDays.contains(key)) {
         streak += 1;
         cursor = cursor.subtract(const Duration(days: 1));
+        guard += 1;
       } else {
         break;
       }

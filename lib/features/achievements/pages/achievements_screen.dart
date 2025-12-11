@@ -279,7 +279,7 @@ class _StreakCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Complete at least one task each day to keep the fire burning.',
+            'Complete at least one task on working days to keep the fire burning. Break days pause your streak.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -293,13 +293,31 @@ class _StreakCard extends StatelessWidget {
                 final day = recentDays[index];
                 return Row(
                   children: [
-                    _FlameIcon(active: day.completed),
+                    _FlameIcon(
+                      active: day.completed,
+                      isBreak: day.isBreakDay,
+                    ),
                     const SizedBox(width: 12),
-                    Text(
-                      day.label,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            day.label,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (day.isBreakDay)
+                            Text(
+                              'Break day (streak paused)',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -409,13 +427,20 @@ class _BadgeTile extends StatelessWidget {
 }
 
 class _FlameIcon extends StatelessWidget {
-  const _FlameIcon({required this.active});
+  const _FlameIcon({
+    required this.active,
+    this.isBreak = false,
+  });
 
   final bool active;
+  final bool isBreak;
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? Colors.orangeAccent : AppColors.textMuted;
+    final color = isBreak
+        ? AppColors.taskCardHighlight
+        : (active ? Colors.orangeAccent : AppColors.textMuted);
+    final icon = isBreak ? Icons.beach_access : Icons.local_fire_department;
     return Container(
       width: 40,
       height: 40,
@@ -425,7 +450,7 @@ class _FlameIcon extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.7)),
       ),
       child: Icon(
-        Icons.local_fire_department,
+        icon,
         color: color,
       ),
     );

@@ -3,33 +3,45 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "Level-02.tmx",
+    "activeFile": "Level-03.tmx",
     "expandedProjectPaths": [
         "."
     ],
     "fileStates": {
         "Level-01.tmx": {
             "expandedObjectLayers": [
-                3,
-                2
+                2,
+                3
             ],
-            "scale": 1.6542,
-            "selectedLayer": 1,
+            "scale": 1.5,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 357.5746584451698,
-                "y": 244.8313384113166
+                "x": 345,
+                "y": 142
             }
         },
         "Level-02.tmx": {
             "expandedObjectLayers": [
-                3,
-                2
+                2,
+                3
             ],
-            "scale": 2.5083,
-            "selectedLayer": 1,
+            "scale": 1.5,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 186.77989076266795,
-                "y": 211.29848901646534
+                "x": 336.33333333333326,
+                "y": 191.33333333333334
+            }
+        },
+        "Level-03.tmx": {
+            "expandedObjectLayers": [
+                2,
+                3
+            ],
+            "scale": 1.5,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 315.6666666666667,
+                "y": 132.66666666666669
             }
         },
         "Pixel Adventure.tsx": {
@@ -46,14 +58,16 @@
     "openFiles": [
         "Pixel Adventure.tsx",
         "Level-01.tmx",
-        "Level-02.tmx"
+        "Level-02.tmx",
+        "Level-03.tmx"
     ],
     "project": "Pixel Adventure.tiled-project",
-    "property.type": "bool",
+    "property.type": "string",
     "recentFiles": [
         "Pixel Adventure.tsx",
         "Level-01.tmx",
-        "Level-02.tmx"
+        "Level-02.tmx",
+        "Level-03.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
