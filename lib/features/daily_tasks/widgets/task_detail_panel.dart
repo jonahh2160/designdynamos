@@ -160,25 +160,44 @@ class TaskDetailPanel extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 4,
                           children: [
-                            IconButton(
-                              tooltip: task!.isDone
-                                  ? 'Mark incomplete'
-                                  : 'Mark complete',
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(6),
-                              onPressed: () => onToggleComplete(!task!.isDone),
-                              icon: Icon(
-                                task!.isDone
-                                    ? Icons.undo_rounded
-                                    : Icons.check_circle_outline,
-                                color: AppColors.textSecondary,
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                final label = task!.isDone ? 'Mark incomplete button' : 'Mark complete button';
+                                if (tts.isEnabled) tts.speak(label);
+                              },
+                              child: Semantics(
+                                button: true,
+                                label: task!.isDone ? 'Mark incomplete' : 'Mark complete',
+                                child: IconButton(
+                                  tooltip: task!.isDone
+                                      ? 'Mark incomplete'
+                                      : 'Mark complete',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(6),
+                                  onPressed: () => onToggleComplete(!task!.isDone),
+                                  icon: Icon(
+                                    task!.isDone
+                                        ? Icons.undo_rounded
+                                        : Icons.check_circle_outline,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
                               ),
                             ),
-                            IconButton(
-                              tooltip: 'Delete task',
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(6),
-                              onPressed: () async {
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                if (tts.isEnabled) tts.speak('Delete task button');
+                              },
+                              child: Semantics(
+                                button: true,
+                                label: 'Delete task',
+                                child: IconButton(
+                                  tooltip: 'Delete task',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(6),
+                                  onPressed: () async {
                                 final ok =
                                     await showDialog<bool>(
                                       context: context,
@@ -203,20 +222,32 @@ class TaskDetailPanel extends StatelessWidget {
                                     ) ??
                                     false;
                                 if (ok) await onDeleteTask();
-                              },
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: AppColors.textSecondary,
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
                               ),
                             ),
-                            IconButton(
-                              tooltip: 'Hide details',
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(6),
-                              onPressed: onClose,
-                              icon: const Icon(
-                                Icons.close,
-                                color: AppColors.textSecondary,
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                if (tts.isEnabled) tts.speak('Close details panel button');
+                              },
+                              child: Semantics(
+                                button: true,
+                                label: 'Close details panel',
+                                child: IconButton(
+                                  tooltip: 'Hide details',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(6),
+                                  onPressed: onClose,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -230,10 +261,20 @@ class TaskDetailPanel extends StatelessWidget {
                   value: targetDateLabel,
                   semanticsLabel: 'Target date: $targetDateLabel',
                   trailing: task!.targetAt != null
-                      ? IconButton(
-                          tooltip: 'Clear target date',
-                          onPressed: onClearTargetAt,
-                          icon: const Icon(Icons.close),
+                      ? MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          onEnter: (_) {
+                            if (tts.isEnabled) tts.speak('Clear target date button');
+                          },
+                          child: Semantics(
+                            button: true,
+                            label: 'Clear target date',
+                            child: IconButton(
+                              tooltip: 'Clear target date',
+                              onPressed: onClearTargetAt,
+                              icon: const Icon(Icons.close),
+                            ),
+                          ),
                         )
                       : null,
                   onTap: () async {

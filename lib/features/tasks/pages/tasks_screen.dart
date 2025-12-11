@@ -3,7 +3,7 @@ import 'package:designdynamos/providers/task_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:designdynamos/core/widgets/action_chip_button.dart';
 import 'package:provider/provider.dart';
-import 'package:designdynamos/providers/task_provider.dart';
+
 import 'package:designdynamos/providers/tts_provider.dart';
 
 import 'package:designdynamos/features/daily_tasks/widgets/task_card.dart';
@@ -57,6 +57,7 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
+    final tts = context.read<TtsProvider>();
     final tasks = taskProvider.allTasks;
     final filtered = _query.isEmpty
         ? tasks
@@ -92,19 +93,41 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by title or notes',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => _searchController.clear(),
-                      ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            MouseRegion(
+              cursor: SystemMouseCursors.text,
+              onEnter: (_) {
+                if (tts.isEnabled) {
+                  tts.speak('Search tasks input, type to filter by title or notes');
+                }
+              },
+              child: Semantics(
+                label: 'Search tasks input field',
+                textField: true,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by title or notes',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            onEnter: (_) {
+                              if (tts.isEnabled) tts.speak('Clear search button');
+                            },
+                            child: Semantics(
+                              button: true,
+                              label: 'Clear search',
+                              child: IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => _searchController.clear(),
+                              ),
+                            ),
+                          ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -144,32 +167,45 @@ class _TasksScreenState extends State<TasksScreen> {
                               const SizedBox(height: 6),
                               Align(
                                 alignment: Alignment.centerLeft,
-                                child: ActionChipButton(
-                                  icon: Icons.today_outlined,
-                                  label: 'Set due today',
-                                  onTap: () async {
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final due = task.dueAt?.toLocal();
-                                    final today = DateUtils.dateOnly(DateTime.now());
-                                    if (due != null && DateUtils.isSameDay(due, today)) {
-                                      messenger.showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Task is already due today'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    try {
-                                      await taskProvider.setDueToday(task.id);
-                                      messenger.showSnackBar(
-                                        const SnackBar(content: Text('Due date set to today')),
-                                      );
-                                    } catch (error) {
-                                      messenger.showSnackBar(
-                                        SnackBar(content: Text('Failed to update due date: $error')),
-                                      );
+                                child: MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  onEnter: (_) {
+                                    final tts = context.read<TtsProvider>();
+                                    if (tts.isEnabled) {
+                                      tts.speak('Set ${task.title} due today button');
                                     }
                                   },
+                                  child: Semantics(
+                                    label: 'Set ${task.title} due today button',
+                                    button: true,
+                                    child: ActionChipButton(
+                                      icon: Icons.today_outlined,
+                                      label: 'Set due today',
+                                      onTap: () async {
+                                        final messenger = ScaffoldMessenger.of(context);
+                                        final due = task.dueAt?.toLocal();
+                                        final today = DateUtils.dateOnly(DateTime.now());
+                                        if (due != null && DateUtils.isSameDay(due, today)) {
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Task is already due today'),
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        try {
+                                          await taskProvider.setDueToday(task.id);
+                                          messenger.showSnackBar(
+                                            const SnackBar(content: Text('Due date set to today')),
+                                          );
+                                        } catch (error) {
+                                          messenger.showSnackBar(
+                                            SnackBar(content: Text('Failed to update due date: $error')),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

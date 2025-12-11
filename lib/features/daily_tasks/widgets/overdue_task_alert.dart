@@ -57,15 +57,22 @@ class OverdueTaskAlert extends StatelessWidget {
               const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
               const SizedBox(width: 8),
               Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'Overdue: "${task.title}"',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                ),
+                child: MouseRegion(
+                  onEnter: (_) {
+                    final label = 'Overdue: ${task.title}';
+                    if (tts.isEnabled) tts.speak(label);
+                  },
+                  child: Semantics(
+                    header: true,
+                    label: 'Overdue: ${task.title}',
+                    child: Text(
+                      'Overdue: "${task.title}"',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -141,6 +148,7 @@ class _OverdueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tts = context.read<TtsProvider>();
     final bg = danger
         ? Colors.redAccent.withOpacity(0.18)
         : secondary
@@ -152,26 +160,29 @@ class _OverdueButton extends StatelessWidget {
             ? AppColors.textPrimary
             : Colors.black;
 
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      
-
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bg,
-          foregroundColor: fg,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
-        ),
-        onPressed: onPressed,
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: fg,
-              ),
+    return MouseRegion(
+      onEnter: (_) {
+        if (tts.isEnabled) tts.speak(semanticLabel);
+      },
+      child: Semantics(
+        button: true,
+        label: semanticLabel,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bg,
+            foregroundColor: fg,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          onPressed: onPressed,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
+          ),
         ),
       ),
     );

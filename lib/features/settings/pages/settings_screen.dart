@@ -3,8 +3,27 @@ import 'package:provider/provider.dart';
 import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _announced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+    final tts = context.read<TtsProvider>();
+    if (!tts.isEnabled) return;
+    _announced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) tts.speak('Settings screen');
+    });
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -15,11 +34,15 @@ class SettingsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
-            Text(
-              'Settings',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 30,
+            Semantics(
+              header: true,
+              label: 'Settings screen',
+              child: Text(
+                'Settings',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 30,
+                ),
               ),
             ),
             const SizedBox(height: 40),

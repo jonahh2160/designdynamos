@@ -9,6 +9,7 @@ import 'package:designdynamos/features/goals/widgets/goal_detail_panel.dart';
 import 'package:designdynamos/features/goals/widgets/goal_summary_card.dart';
 import 'package:designdynamos/providers/goal_provider.dart';
 import 'package:designdynamos/providers/task_provider.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 import 'package:intl/intl.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -20,12 +21,25 @@ class GoalsScreen extends StatefulWidget {
 
 class _GoalsScreenState extends State<GoalsScreen> {
   String? _deletingGoalId;
+  bool _announced = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GoalProvider>().refresh();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_announced) return;
+    final tts = context.read<TtsProvider>();
+    if (!tts.isEnabled) return;
+    _announced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) tts.speak('Goals screen');
     });
   }
 
@@ -95,22 +109,29 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 children: [
                   Semantics(
                     header: true,
-                    label: 'Goals Screen',
+                    label: 'Goals screen',
                     child: Text(
-                    'Goals',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      'Goals',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ),
-                  ),
                   const Spacer(),
-                  Semantics(
-                    button: true,
-                    label: 'Create new goal',
-                    child:FilledButton.icon(
-                      onPressed: () => _openCreateGoalSheet(context),
-                      icon: const Icon(Icons.add),
-                      label: const Text('New Goal'),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    onEnter: (_) {
+                      final tts = context.read<TtsProvider>();
+                      if (tts.isEnabled) tts.speak('Create new goal button');
+                    },
+                    child: Semantics(
+                      button: true,
+                      label: 'Create new goal',
+                      child: FilledButton.icon(
+                        onPressed: () => _openCreateGoalSheet(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('New Goal'),
+                      ),
                     ),
                   ),
                 ],
@@ -357,6 +378,7 @@ class _AttachTaskSheetState extends State<_AttachTaskSheet> {
   String? _selectedStepId;
   String? _selectedTaskId;
   bool _saving = false;
+  bool _announced = false;
 
   @override
   void initState() {
@@ -371,61 +393,131 @@ class _AttachTaskSheetState extends State<_AttachTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_announced) {
+      final tts = context.read<TtsProvider>();
+      if (tts.isEnabled) {
+        _announced = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            tts.speak('Attach task to goal sheet open for ${widget.goal.title}');
+          }
+        });
+      }
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Add task to ${widget.goal.title}',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          Semantics(
+            header: true,
+            label: 'Add task to goal sheet for ${widget.goal.title}',
+            child: Text(
+              'Add task to ${widget.goal.title}',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _selectedStepId,
-            decoration: const InputDecoration(labelText: 'Goal step'),
-            items: widget.goal.steps
-                .map(
-                  (step) =>
-                      DropdownMenuItem(value: step.id, child: Text(step.title)),
-                )
-                .toList(),
-            onChanged: (value) => setState(() => _selectedStepId = value),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) {
+              final tts = context.read<TtsProvider>();
+              if (tts.isEnabled) tts.speak('Select goal step dropdown');
+            },
+            child: Semantics(
+              label: 'Select goal step',
+              button: true,
+              child: DropdownButtonFormField<String>(
+                initialValue: _selectedStepId,
+                decoration: const InputDecoration(labelText: 'Goal step'),
+                items: widget.goal.steps
+                    .map(
+                      (step) => DropdownMenuItem(
+                        value: step.id,
+                        onTap: () {
+                          final tts = context.read<TtsProvider>();
+                          if (tts.isEnabled) tts.speak('Step ${step.title}');
+                        },
+                        child: Semantics(
+                          label: 'Step ${step.title}',
+                          child: Text(step.title),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedStepId = value),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _selectedTaskId,
-            decoration: const InputDecoration(labelText: 'Task'),
-            items: widget.tasks
-                .map(
-                  (task) =>
-                      DropdownMenuItem(value: task.id, child: Text(task.title)),
-                )
-                .toList(),
-            onChanged: (value) => setState(() => _selectedTaskId = value),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) {
+              final tts = context.read<TtsProvider>();
+              if (tts.isEnabled) tts.speak('Select task dropdown');
+            },
+            child: Semantics(
+              label: 'Select task to attach',
+              button: true,
+              child: DropdownButtonFormField<String>(
+                initialValue: _selectedTaskId,
+                decoration: const InputDecoration(labelText: 'Task'),
+                items: widget.tasks
+                    .map(
+                      (task) => DropdownMenuItem(
+                        value: task.id,
+                        onTap: () {
+                          final tts = context.read<TtsProvider>();
+                          if (tts.isEnabled) tts.speak('Task ${task.title}');
+                        },
+                        child: Semantics(
+                          label: 'Task ${task.title}',
+                          child: Text(task.title),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedTaskId = value),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed:
-                  _saving || _selectedStepId == null || _selectedTaskId == null
-                  ? null
-                  : () async {
-                      setState(() => _saving = true);
-                      try {
-                        await widget.onSubmit(
-                          _selectedStepId!,
-                          _selectedTaskId!,
-                        );
-                      } finally {
-                        if (mounted) setState(() => _saving = false);
-                      }
-                    },
-              child: Text(_saving ? 'Adding...' : 'Add task'),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) {
+                final tts = context.read<TtsProvider>();
+                if (tts.isEnabled) {
+                  final disabled = _saving || _selectedStepId == null || _selectedTaskId == null;
+                  tts.speak(disabled ? 'Add task button disabled' : 'Add task button');
+                }
+              },
+              child: Semantics(
+                button: true,
+                enabled: !(_saving || _selectedStepId == null || _selectedTaskId == null),
+                label: 'Add selected task to goal',
+                child: ElevatedButton(
+                  onPressed:
+                      _saving || _selectedStepId == null || _selectedTaskId == null
+                          ? null
+                          : () async {
+                              setState(() => _saving = true);
+                              try {
+                                await widget.onSubmit(
+                                  _selectedStepId!,
+                                  _selectedTaskId!,
+                                );
+                              } finally {
+                                if (mounted) setState(() => _saving = false);
+                              }
+                            },
+                  child: Text(_saving ? 'Adding...' : 'Add task'),
+                ),
+              ),
             ),
           ),
         ],
@@ -452,6 +544,7 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
   int _priority = 5;
   bool _submitting = false;
   String? _errorText;
+  bool _announced = false;
 
   @override
   void dispose() {
@@ -466,31 +559,66 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+    if (!_announced) {
+      final tts = context.read<TtsProvider>();
+      if (tts.isEnabled) {
+        _announced = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) tts.speak('Create goal sheet open');
+        });
+      }
+    }
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 24, 24, bottom + 24),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Create Goal',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            Semantics(
+              header: true,
+              label: 'Create goal sheet',
+              child: Text(
+                'Create Goal',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title',
-                errorText: _errorText,
+            MouseRegion(
+              cursor: SystemMouseCursors.text,
+              onEnter: (_) {
+                final tts = context.read<TtsProvider>();
+                if (tts.isEnabled) tts.speak('Goal title text field');
+              },
+              child: Semantics(
+                label: 'Goal title text field',
+                textField: true,
+                child: TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Title',
+                    errorText: _errorText,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description'),
-              maxLines: 3,
+            MouseRegion(
+              cursor: SystemMouseCursors.text,
+              onEnter: (_) {
+                final tts = context.read<TtsProvider>();
+                if (tts.isEnabled) tts.speak('Goal description text field');
+              },
+              child: Semantics(
+                label: 'Goal description text field',
+                textField: true,
+                child: TextField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 3,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -513,17 +641,38 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              initialValue: _priority,
-              decoration: const InputDecoration(labelText: 'Priority'),
-              items: [
-                for (var value = 1; value <= 10; value++)
-                  DropdownMenuItem(value: value, child: Text('Level $value')),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => _priority = value);
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) {
+                final tts = context.read<TtsProvider>();
+                if (tts.isEnabled) tts.speak('Priority dropdown, current level $_priority');
               },
+              child: Semantics(
+                label: 'Priority dropdown, current level $_priority',
+                button: true,
+                child: DropdownButtonFormField<int>(
+                  initialValue: _priority,
+                  decoration: const InputDecoration(labelText: 'Priority'),
+                  items: [
+                    for (var value = 1; value <= 10; value++)
+                      DropdownMenuItem(
+                        value: value,
+                        onTap: () {
+                          final tts = context.read<TtsProvider>();
+                          if (tts.isEnabled) tts.speak('Priority level $value');
+                        },
+                        child: Semantics(
+                          label: 'Level $value',
+                          child: Text('Level $value'),
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _priority = value);
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -537,9 +686,20 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _stepControllers[i],
-                      decoration: InputDecoration(labelText: 'Step ${i + 1}'),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.text,
+                      onEnter: (_) {
+                        final tts = context.read<TtsProvider>();
+                        if (tts.isEnabled) tts.speak('Step ${i + 1} text field');
+                      },
+                      child: Semantics(
+                        label: 'Step ${i + 1} text field',
+                        textField: true,
+                        child: TextField(
+                          controller: _stepControllers[i],
+                          decoration: InputDecoration(labelText: 'Step ${i + 1}'),
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(
@@ -557,21 +717,44 @@ class _CreateGoalSheetState extends State<_CreateGoalSheet> {
               ),
               const SizedBox(height: 8),
             ],
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _stepControllers.add(TextEditingController());
-                });
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) {
+                final tts = context.read<TtsProvider>();
+                if (tts.isEnabled) tts.speak('Add step button');
               },
-              icon: const Icon(Icons.add),
-              label: const Text('Add step'),
+              child: Semantics(
+                button: true,
+                label: 'Add step',
+                child: TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _stepControllers.add(TextEditingController());
+                    });
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add step'),
+                ),
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: Text(_submitting ? 'Creating...' : 'Create goal'),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                onEnter: (_) {
+                  final tts = context.read<TtsProvider>();
+                  if (tts.isEnabled) tts.speak(_submitting ? 'Create goal button disabled' : 'Create goal button');
+                },
+                child: Semantics(
+                  button: true,
+                  enabled: !_submitting,
+                  label: 'Create goal',
+                  child: FilledButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: Text(_submitting ? 'Creating...' : 'Create goal'),
+                  ),
+                ),
               ),
             ),
           ],
@@ -634,40 +817,52 @@ class _DatePickerField extends StatelessWidget {
     final text = value == null
         ? 'Select date'
         : DateFormat.yMMMMd().format(value!);
-    return OutlinedButton(
-      onPressed: () async {
-        final now = DateTime.now();
-        final initial = value ?? now;
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: initial,
-          firstDate: DateTime(now.year - 1),
-          lastDate: DateTime(now.year + 5),
-        );
-        if (picked != null) {
-          onSelected(DateTime(picked.year, picked.month, picked.day));
-        }
+    final hoverLabel = '$label, ${value == null ? 'no date selected' : text}';
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        final tts = context.read<TtsProvider>();
+        if (tts.isEnabled) tts.speak(hoverLabel);
       },
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
+      child: Semantics(
+        button: true,
+        label: hoverLabel,
+        child: OutlinedButton(
+          onPressed: () async {
+            final now = DateTime.now();
+            final initial = value ?? now;
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: initial,
+              firstDate: DateTime(now.year - 1),
+              lastDate: DateTime(now.year + 5),
+            );
+            if (picked != null) {
+              onSelected(DateTime(picked.year, picked.month, picked.day));
+            }
+          },
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  text,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              text,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -551,31 +551,38 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                   if (isBreakDay)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.sidebarActive.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.taskCardHighlight.withOpacity(0.6),
-                          ),
-                        ),
-                        child: Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.beach_access,
-                              color: AppColors.taskCardHighlight,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.basic,
+                        onEnter: (_) {
+                          if (tts.isEnabled) tts.speak('Break day notification. Tasks are optional and your streak is paused.');
+                        },
+                        child: Semantics(
+                          label: 'Break day notification. Tasks are optional and your streak is paused.',
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.sidebarActive.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.taskCardHighlight.withOpacity(0.6),
+                              ),
                             ),
-                            Text(
-                              'Break day: tasks are optional and your streak is paused.',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
+                            child: Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.beach_access,
+                                  color: AppColors.taskCardHighlight,
+                                ),
+                                Text(
+                                  'Break day: tasks are optional and your streak is paused.',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
                             TextButton(
                               onPressed: () async {
                                 final messenger = ScaffoldMessenger.of(context);
@@ -592,8 +599,10 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                                 }
                               },
                               child: const Text('Resume'),
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
+                        ),
                         ),
                       ),
                     ),
@@ -602,13 +611,24 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          DateFormat('MMMM d').format(p.day),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.basic,
+                          onEnter: (_) {
+                            final dateLabel = DateFormat('EEEE, MMMM d, yyyy').format(p.day);
+                            if (tts.isEnabled) tts.speak('Today is $dateLabel');
+                          },
+                          child: Semantics(
+                            header: true,
+                            label: DateFormat('EEEE, MMMM d, yyyy').format(p.day),
+                            child: Text(
+                              DateFormat('MMMM d').format(p.day),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),

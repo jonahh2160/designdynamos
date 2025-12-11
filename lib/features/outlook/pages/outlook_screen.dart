@@ -155,23 +155,53 @@ class _OutlookScreenState extends State<OutlookScreen> {
                         return startsBeforeOrOnDay && dueOnOrAfterDay;
                       }).toList()
                         ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
-                      return LargeBox(
-                        label: formattedDate,
-                        child: SizedBox(
-                          height: 575, //or any height that fits your layout
-                          child: Scrollbar(
-                            thumbVisibility: true,
-                            child: ListView(
-                            children: tasksForDay.isEmpty
-                              ? [const Text("No events", style: TextStyle(color: Colors.white70))]
-                              : tasksForDay.map((task) => TaskCard(
-                                task: task,
-                                onTap: () {},
-                                onToggle: null,
-                                subtaskDone: context.read<TaskProvider>().subtaskProgress(task.id).$1,
-                                subtaskTotal: context.read<TaskProvider>().subtaskProgress(task.id).$2,
-                                labels: context.read<TaskProvider>().labelsOf(task.id),
-                              )).toList(),
+                      return MouseRegion(
+                        onEnter: (_) {
+                          final label = tasksForDay.isEmpty
+                              ? '$formattedDate. No events.'
+                              : '$formattedDate. ${tasksForDay.length} events.';
+                          if (tts.isEnabled) tts.speak(label);
+                        },
+                        child: Semantics(
+                          label: tasksForDay.isEmpty
+                              ? '$formattedDate. No events.'
+                              : '$formattedDate. ${tasksForDay.length} events.',
+                          child: LargeBox(
+                            label: formattedDate,
+                            child: SizedBox(
+                              height: 575,
+                              child: Scrollbar(
+                                thumbVisibility: true,
+                                child: ListView(
+                                  children: tasksForDay.isEmpty
+                                      ? [
+                                          const Text(
+                                            "No events",
+                                            style: TextStyle(color: Colors.white70),
+                                          )
+                                        ]
+                                      : tasksForDay
+                                          .map(
+                                            (task) => TaskCard(
+                                              task: task,
+                                              onTap: () {},
+                                              onToggle: null,
+                                              subtaskDone: context
+                                                  .read<TaskProvider>()
+                                                  .subtaskProgress(task.id)
+                                                  .$1,
+                                              subtaskTotal: context
+                                                  .read<TaskProvider>()
+                                                  .subtaskProgress(task.id)
+                                                  .$2,
+                                              labels: context
+                                                  .read<TaskProvider>()
+                                                  .labelsOf(task.id),
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                              ),
                             ),
                           ),
                         ),

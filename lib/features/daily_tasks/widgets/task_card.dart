@@ -107,10 +107,21 @@ class TaskCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (onToggle != null)
-                      GestureDetector(
-                        onTap: onToggle,
-                        behavior: HitTestBehavior.translucent,
-                        child: StatusPip(isCompleted: completed),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) {
+                          final label = completed ? 'Mark incomplete button' : 'Mark complete button';
+                          if (ttsProvider.isEnabled) ttsProvider.speak(label);
+                        },
+                        child: Semantics(
+                          button: true,
+                          label: completed ? 'Mark incomplete' : 'Mark complete',
+                          child: GestureDetector(
+                            onTap: onToggle,
+                            behavior: HitTestBehavior.translucent,
+                            child: StatusPip(isCompleted: completed),
+                          ),
+                        ),
                       ),
                     const SizedBox(width: 14),
                     IconContainer(icon: iconData, isCompleted: completed),

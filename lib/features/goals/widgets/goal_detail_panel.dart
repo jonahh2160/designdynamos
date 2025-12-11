@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import 'package:designdynamos/core/models/goal.dart';
 import 'package:designdynamos/core/models/goal_step.dart';
 import 'package:designdynamos/core/models/task_item.dart';
 import 'package:designdynamos/core/theme/app_colors.dart';
+import 'package:designdynamos/providers/tts_provider.dart';
 
 class GoalDetailPanel extends StatelessWidget {
   const GoalDetailPanel({
@@ -81,27 +83,52 @@ class GoalDetailPanel extends StatelessWidget {
                       ),
                     ),
                     if (onDelete != null) ...[
-                      IconButton(
-                        tooltip: isDeleting ? 'Deleting…' : 'Delete goal',
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.all(6),
-                        onPressed: isDeleting ? null : onDelete,
-                        icon: isDeleting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(
-                                Icons.delete_outline,
-                                color: AppColors.textSecondary,
-                              ),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) {
+                          final tts = context.read<TtsProvider>();
+                          if (tts.isEnabled) {
+                            tts.speak(isDeleting ? 'Deleting goal' : 'Delete goal');
+                          }
+                        },
+                        child: Semantics(
+                          button: true,
+                          label: isDeleting ? 'Deleting goal' : 'Delete goal',
+                          enabled: !isDeleting,
+                          child: IconButton(
+                            tooltip: isDeleting ? 'Deleting…' : 'Delete goal',
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.all(6),
+                            onPressed: isDeleting ? null : onDelete,
+                            icon: isDeleting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(
+                                    Icons.delete_outline,
+                                    color: AppColors.textSecondary,
+                                  ),
+                          ),
+                        ),
                       ),
                     ],
-                    IconButton(
-                      onPressed: onClose,
-                      tooltip: 'Close',
-                      icon: const Icon(Icons.close, color: AppColors.textMuted),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      onEnter: (_) {
+                        final tts = context.read<TtsProvider>();
+                        if (tts.isEnabled) tts.speak('Close goal details');
+                      },
+                      child: Semantics(
+                        button: true,
+                        label: 'Close goal details',
+                        child: IconButton(
+                          onPressed: onClose,
+                          tooltip: 'Close',
+                          icon: const Icon(Icons.close, color: AppColors.textMuted),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -176,10 +203,21 @@ class GoalDetailPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
-                ElevatedButton.icon(
-                  onPressed: onAddTask,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add task to Goal'),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) {
+                    final tts = context.read<TtsProvider>();
+                    if (tts.isEnabled) tts.speak('Add task to goal button');
+                  },
+                  child: Semantics(
+                    button: true,
+                    label: 'Add task to goal',
+                    child: ElevatedButton.icon(
+                      onPressed: onAddTask,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add task to Goal'),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -217,53 +255,64 @@ class _GoalStepTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final completedTasks = tasks.where((task) => task.isDone).length;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.subtaskBackground,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final stepLabel = 'Step ${step.title}, $completedTasks of ${tasks.length} tasks complete';
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      onEnter: (_) {
+        final tts = context.read<TtsProvider>();
+        if (tts.isEnabled) tts.speak(stepLabel);
+      },
+      child: Semantics(
+        label: stepLabel,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.subtaskBackground,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                step.title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    step.title,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    '$completedTasks/${tasks.length}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
               ),
-              Text(
-                '$completedTasks/${tasks.length}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
+              const SizedBox(height: 12),
+              if (tasks.isEmpty)
+                Text(
+                  'No tasks assigned yet.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                )
+              else
+                Column(
+                  children: [
+                    for (final task in tasks) ...[
+                      _GoalTaskRow(
+                        task: task,
+                        onToggle: (done) => onToggleTask(task, done),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (tasks.isEmpty)
-            Text(
-              'No tasks assigned yet.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-            )
-          else
-            Column(
-              children: [
-                for (final task in tasks) ...[
-                  _GoalTaskRow(
-                    task: task,
-                    onToggle: (done) => onToggleTask(task, done),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -277,45 +326,56 @@ class _GoalTaskRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Checkbox(
-          value: task.isDone,
-          onChanged: (value) {
-            if (value == null) return;
-            onToggle(value);
-          },
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                task.title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textPrimary,
-                  decoration: task.isDone
-                      ? TextDecoration.lineThrough
-                      : TextDecoration.none,
-                ),
+    final taskLabel = 'Task ${task.title}, ${task.isDone ? 'completed' : 'not completed'}';
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        final tts = context.read<TtsProvider>();
+        if (tts.isEnabled) tts.speak(taskLabel);
+      },
+      child: Semantics(
+        label: taskLabel,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: task.isDone,
+              onChanged: (value) {
+                if (value == null) return;
+                onToggle(value);
+              },
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.textPrimary,
+                      decoration: task.isDone
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  LinearProgressIndicator(
+                    value: task.isDone ? 1 : 0,
+                    backgroundColor: AppColors.progressTrack,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      task.isDone ? AppColors.accent : AppColors.textMuted,
+                    ),
+                    minHeight: 4,
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              LinearProgressIndicator(
-                value: task.isDone ? 1 : 0,
-                backgroundColor: AppColors.progressTrack,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  task.isDone ? AppColors.accent : AppColors.textMuted,
-                ),
-                minHeight: 4,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.drag_handle_rounded, color: AppColors.textSecondary),
+          ],
         ),
-        const SizedBox(width: 8),
-        Icon(Icons.drag_handle_rounded, color: AppColors.textSecondary),
-      ],
+      ),
     );
   }
 }
@@ -419,13 +479,25 @@ class _InfoTile extends StatelessWidget {
         Text(value, style: valueStyle),
       ],
     );
-    return Material(
-      color: AppColors.subtaskBackground,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(padding: const EdgeInsets.all(16), child: content),
+    final labelText = '$label $value';
+    return MouseRegion(
+      cursor: onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) {
+        final tts = context.read<TtsProvider>();
+        if (tts.isEnabled) tts.speak(labelText);
+      },
+      child: Semantics(
+        label: labelText,
+        button: onTap != null,
+        child: Material(
+          color: AppColors.subtaskBackground,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(padding: const EdgeInsets.all(16), child: content),
+          ),
+        ),
       ),
     );
   }
@@ -474,41 +546,53 @@ class _PriorityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.subtaskBackground,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final labelText = '$label level $value';
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        final tts = context.read<TtsProvider>();
+        if (tts.isEnabled) tts.speak(labelText);
+      },
+      child: Semantics(
+        label: labelText,
+        button: true,
+        child: Material(
+          color: AppColors.subtaskBackground,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: AppColors.textSecondary, size: 18),
-                const SizedBox(width: 8),
-                Text(label, style: labelStyle),
+                Row(
+                  children: [
+                    Icon(icon, color: AppColors.textSecondary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(label, style: labelStyle),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: value,
+                    dropdownColor: AppColors.detailCard,
+                    iconEnabledColor: AppColors.textPrimary,
+                    onChanged: (val) {
+                      if (val == null) return;
+                      onChanged(val);
+                    },
+                    items: [
+                      for (var i = 1; i <= 10; i++)
+                        DropdownMenuItem(
+                          value: i,
+                          child: Text('Level $i', style: valueStyle),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: value,
-                dropdownColor: AppColors.detailCard,
-                iconEnabledColor: AppColors.textPrimary,
-                onChanged: (val) {
-                  if (val == null) return;
-                  onChanged(val);
-                },
-                items: [
-                  for (var i = 1; i <= 10; i++)
-                    DropdownMenuItem(
-                      value: i,
-                      child: Text('Level $i', style: valueStyle),
-                    ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
