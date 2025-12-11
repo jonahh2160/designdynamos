@@ -120,6 +120,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         .map((c) => c.text.trim())
         .where((t) => t.isNotEmpty)
         .toList();
+    final pendingLabel = _labelInputController.text.trim();
+    if (pendingLabel.isNotEmpty) {
+      _labels.add(pendingLabel);
+    }
     final labels = Set<String>.from(_labels);
 
     Navigator.of(context).pop(

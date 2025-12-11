@@ -24,14 +24,15 @@ class ProgressProvider extends ChangeNotifier {
   Future<void> refresh({
     ProgressRange? range,
     String? category,
+    bool resetCategory = false,
   }) async {
     if (_loading) return;
-    if (range != null || category != null) {
-      _snapshot = _snapshot.copyWith(
-        range: range ?? _snapshot.range,
-        categoryFilter: category ?? _snapshot.categoryFilter,
-      );
-    }
+    final nextRange = range ?? _snapshot.range;
+    final nextCategory = resetCategory ? null : category ?? _snapshot.categoryFilter;
+    _snapshot = _snapshot.copyWith(
+      range: nextRange,
+      categoryFilter: nextCategory,
+    );
 
     _loading = true;
     _error = null;
@@ -39,8 +40,8 @@ class ProgressProvider extends ChangeNotifier {
 
     try {
       final result = await _service.fetch(
-        range: _snapshot.range,
-        categoryFilter: _snapshot.categoryFilter,
+        range: nextRange,
+        categoryFilter: nextCategory,
       );
       _snapshot = result;
       _lastGood = result;

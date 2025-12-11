@@ -226,8 +226,7 @@ class AchievementsService {
     Set<String> breakDays,
   ) {
     final now = DateTime.now();
-    DateTime cursor = DateTime(now.year, now.month, now.day);
-    int streak = 0;
+    final today = DateTime(now.year, now.month, now.day);
 
     final Set<String> completedDays = {
       for (final row in stats)
@@ -235,10 +234,36 @@ class AchievementsService {
         row['day'] as String,
     };
 
+    //Find most recent completed day (not in the future).
+    DateTime? lastCompleted;
+    for (final key in completedDays) {
+      final parsed = DateTime.tryParse(key);
+      if (parsed == null) continue;
+      final dayOnly = DateTime(parsed.year, parsed.month, parsed.day);
+      if (dayOnly.isAfter(today)) continue;
+      if (lastCompleted == null || dayOnly.isAfter(lastCompleted)) {
+        lastCompleted = dayOnly;
+      }
+    }
+    if (lastCompleted == null) return 0;
+
+    //If there's a missed working day between the last completion and today (excluding today),
+    //the streak is already broken.
+    var forwardCursor = lastCompleted.add(const Duration(days: 1));
+    while (forwardCursor.isBefore(today)) {
+      final key = _dayKey(forwardCursor);
+      if (!breakDays.contains(key) && !completedDays.contains(key)) {
+        return 0;
+      }
+      forwardCursor = forwardCursor.add(const Duration(days: 1));
+    }
+
+    int streak = 0;
+    DateTime cursor = lastCompleted;
     int guard = 0;
     while (true) {
       if (guard > 365) break; //safety net
-      final key = cursor.toIso8601String().split('T').first;
+      final key = _dayKey(cursor);
       if (breakDays.contains(key)) {
         cursor = cursor.subtract(const Duration(days: 1));
         guard += 1;
@@ -384,5 +409,10 @@ class AchievementsService {
       default:
         return '';
     }
+  }
+
+  String _dayKey(DateTime date) {
+    final local = DateTime(date.year, date.month, date.day);
+    return local.toIso8601String().split('T').first;
   }
 }
