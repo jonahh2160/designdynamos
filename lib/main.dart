@@ -25,18 +25,11 @@ import 'providers/progress_provider.dart';
 import 'data/services/progress_service.dart';
 import 'providers/break_day_provider.dart';
 import 'data/services/break_day_service.dart';
+import 'features/auth/pages/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.init(); //initialize Supabase
-
-  //Attempt test sign-in; don't crash the app if credentials or URL are wrong.
-  try {
-    await SupabaseService.signInWithTestUser();
-  } catch (error, stack) {
-    debugPrint('Test sign-in failed: $error');
-    debugPrint('$stack');
-  }
 
   final breakDayService = BreakDayService(SupabaseService.client);
 
@@ -70,22 +63,17 @@ void main() async {
               GameProvider(GameService(SupabaseService.client))..refresh(),
         ),
         ChangeNotifierProvider(
-          create: (_) =>
-              AchievementsProvider(
-                AchievementsService(
-                  SupabaseService.client,
-                  breakDays: breakDayService,
-                ),
-              ),
+          create: (_) => AchievementsProvider(
+            AchievementsService(
+              SupabaseService.client,
+              breakDays: breakDayService,
+            ),
+          ),
         ),
         ChangeNotifierProvider(
-          create: (_) =>
-              ProgressProvider(
-                ProgressService(
-                  SupabaseService.client,
-                  breakDays: breakDayService,
-                ),
-              ),
+          create: (_) => ProgressProvider(
+            ProgressService(SupabaseService.client, breakDays: breakDayService),
+          ),
         ),
       ],
       child: const MyApp(),
@@ -102,7 +90,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Tasqly',
       theme: AppTheme.dark,
-      home: const DashboardPage(),
+      home: SupabaseService.client.auth.currentSession == null
+          ? const LoginPage()
+          : const DashboardPage(),
     );
   }
 }
@@ -171,6 +161,19 @@ class SidebarButton extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+extension ContextExtension on BuildContext {
+  void showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(this).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError
+            ? Theme.of(this).colorScheme.error
+            : Theme.of(this).snackBarTheme.backgroundColor,
       ),
     );
   }
