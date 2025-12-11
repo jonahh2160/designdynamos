@@ -57,7 +57,7 @@ class _OutlookScreenState extends State<OutlookScreen> {
   void initState() {
     super.initState();
 
-    // Fetch tasks after the first frame
+    //Fetch tasks after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TaskProvider>().refreshAllTasks();
     });
@@ -151,45 +151,27 @@ class _OutlookScreenState extends State<OutlookScreen> {
                         final startsBeforeOrOnDay = !start.isAfter(dayEnd.subtract(const Duration(milliseconds: 1)));
                         final dueOnOrAfterDay = !due.isBefore(dayStart);
 
-                        // Show every day from start through due (inclusive) while not completed.
+                        //Show every day from start through due (inclusive) while not completed.
                         return startsBeforeOrOnDay && dueOnOrAfterDay;
                       }).toList()
                         ..sort((a, b) => a.orderHint.compareTo(b.orderHint));
-                      
-                      final itemCountLabel = tasksForDay.isEmpty
-                          ? 'No tasks'
-                          : '${tasksForDay.length} task${tasksForDay.length == 1 ? '' : 's'}';
-                      final dayLabel = 'Tasks for $formattedDate, $itemCountLabel';
-
-                      return MouseRegion(
-                        onEnter: (_) => tts.speak(dayLabel),
-                        child: Semantics(
-                          label: dayLabel,
-                          child: LargeBox(
-                          label: formattedDate,
-                          child: SizedBox(
-                            height: 575, // or any height that fits your layout
-                            child: Scrollbar(
-                              thumbVisibility: true,
-                              child: ListView(
-                              children: tasksForDay.isEmpty
-                                ? [
-                                  Semantics(
-                                    label: "No events this day",
-                                    child: const Text("No events", 
-                                    style: TextStyle(color: Colors.white70),
-                                    ),
-                                  )
-                                  ]
-                                : tasksForDay.map((task) => TaskCard(
-                                  task: task,
-                                  onTap: () {},
-                                  onToggle: null,
-                                  subtaskDone: context.read<TaskProvider>().subtaskProgress(task.id).$1,
-                                  subtaskTotal: context.read<TaskProvider>().subtaskProgress(task.id).$2,
-                                  labels: context.read<TaskProvider>().labelsOf(task.id),
-                                )).toList(),
-                              ),
+                      return LargeBox(
+                        label: formattedDate,
+                        child: SizedBox(
+                          height: 575, //or any height that fits your layout
+                          child: Scrollbar(
+                            thumbVisibility: true,
+                            child: ListView(
+                            children: tasksForDay.isEmpty
+                              ? [const Text("No events", style: TextStyle(color: Colors.white70))]
+                              : tasksForDay.map((task) => TaskCard(
+                                task: task,
+                                onTap: () {},
+                                onToggle: null,
+                                subtaskDone: context.read<TaskProvider>().subtaskProgress(task.id).$1,
+                                subtaskTotal: context.read<TaskProvider>().subtaskProgress(task.id).$2,
+                                labels: context.read<TaskProvider>().labelsOf(task.id),
+                              )).toList(),
                             ),
                           ),
                         ),

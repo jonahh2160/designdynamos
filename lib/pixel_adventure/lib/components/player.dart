@@ -47,7 +47,7 @@ class Player extends SpriteAnimationGroupComponent with HasGameReference<PixelAd
   double moveSpeed = 100;
 
   Vector2 startingPosition = Vector2.zero();
-  Vector2 velocity = Vector2.zero();// x is 0 and y is 0 initially
+  Vector2 velocity = Vector2.zero();//x is 0 and y is 0 initially
   bool isOnGround = false;
   bool hasJumped = false;
   bool gotHit = false;

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:designdynamos/data/services/break_day_service.dart';
 
 class AchievementBadge {
   const AchievementBadge({
@@ -31,10 +32,15 @@ class LeaderboardEntry {
 }
 
 class DayStreakStatus {
-  const DayStreakStatus({required this.label, required this.completed});
+  const DayStreakStatus({
+    required this.label,
+    required this.completed,
+    this.isBreakDay = false,
+  });
 
   final String label;
   final bool completed;
+  final bool isBreakDay;
 }
 
 class AchievementsSnapshot {
@@ -54,9 +60,14 @@ class AchievementsSnapshot {
 }
 
 class AchievementsService {
-  AchievementsService(SupabaseClient client) : _client = client;
+  AchievementsService(
+    SupabaseClient client, {
+    BreakDayService? breakDays,
+  })  : _client = client,
+        _breakDays = breakDays ?? BreakDayService(client);
 
   final SupabaseClient _client;
+  final BreakDayService _breakDays;
 
   Future<AchievementsSnapshot> fetch() async {
     final userId = _client.auth.currentUser?.id;
@@ -64,16 +75,24 @@ class AchievementsService {
     final badges = await _fetchBadges(userId);
     final leaderboard = await _fetchLeaderboard(userId);
     final dailyStats = await _fetchDailyStats();
+    final now = DateTime.now();
+    final breakDayKeys = await _fetchBreakDays(
+      now.subtract(const Duration(days: 90)),
+      now.add(const Duration(days: 14)),
+    );
     final totalTasks = await _fetchTotalTasks();
 
-    final streak = _computeStreak(dailyStats);
+    final streak = _computeStreak(dailyStats, breakDayKeys);
     final computedBadges = _computeLocalBadges(
       streak: streak,
       totalTasksCompleted: totalTasks,
       existing: badges,
     );
 
-    final recentDays = _buildRecentDayStatuses(dailyStats);
+    final recentDays = _buildRecentDayStatuses(
+      dailyStats,
+      breakDayKeys,
+    );
 
     return AchievementsSnapshot(
       badges: computedBadges,
@@ -148,6 +167,14 @@ class AchievementsService {
     ];
   }
 
+  Future<Set<String>> _fetchBreakDays(DateTime start, DateTime end) async {
+    try {
+      return await _breakDays.fetchRange(start, end);
+    } catch (_) {
+      return {};
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _fetchDailyStats() async {
     try {
       final response = await _client
@@ -162,7 +189,7 @@ class AchievementsService {
           .where((row) => row['day'] != null)
           .map((row) {
             final raw = row['day'] as String;
-            // Treat stored DATE as UTC midnight, then shift to local day to match user view.
+            //Treat stored DATE as UTC midnight, then shift to local day to match user view.
             final asUtc = DateTime.utc(
               int.parse(raw.substring(0, 4)),
               int.parse(raw.substring(5, 7)),
@@ -194,22 +221,33 @@ class AchievementsService {
     }
   }
 
-  int _computeStreak(List<Map<String, dynamic>> stats) {
+  int _computeStreak(
+    List<Map<String, dynamic>> stats,
+    Set<String> breakDays,
+  ) {
     final now = DateTime.now();
     DateTime cursor = DateTime(now.year, now.month, now.day);
     int streak = 0;
 
     final Set<String> completedDays = {
       for (final row in stats)
-        if ((row['tasks_completed'] as int? ?? 0) > 0)
-          row['day'] as String,
+      if ((row['tasks_completed'] as int? ?? 0) > 0)
+        row['day'] as String,
     };
 
+    int guard = 0;
     while (true) {
+      if (guard > 365) break; //safety net
       final key = cursor.toIso8601String().split('T').first;
+      if (breakDays.contains(key)) {
+        cursor = cursor.subtract(const Duration(days: 1));
+        guard += 1;
+        continue;
+      }
       if (completedDays.contains(key)) {
         streak += 1;
         cursor = cursor.subtract(const Duration(days: 1));
+        guard += 1;
       } else {
         break;
       }
@@ -220,6 +258,7 @@ class AchievementsService {
 
   List<DayStreakStatus> _buildRecentDayStatuses(
     List<Map<String, dynamic>> stats,
+    Set<String> breakDays,
   ) {
     final Map<String, int> byDay = {
       for (final row in stats)
@@ -227,7 +266,7 @@ class AchievementsService {
     };
 
     final now = DateTime.now();
-    // Build the current week (Mon–Sun) in order, so all days are shown.
+    //Build the current week (Mon–Sun) in order, so all days are shown.
     final startOfWeek = DateTime(now.year, now.month, now.day)
         .subtract(Duration(days: now.weekday - DateTime.monday));
     final List<DayStreakStatus> days = [];
@@ -238,7 +277,15 @@ class AchievementsService {
           .split('T')
           .first;
       final label = _weekdayLabel(date.weekday);
-      days.add(DayStreakStatus(label: label, completed: (byDay[key] ?? 0) > 0));
+      final completed = (byDay[key] ?? 0) > 0;
+      final isBreakDay = breakDays.contains(key);
+      days.add(
+        DayStreakStatus(
+          label: label,
+          completed: completed || isBreakDay,
+          isBreakDay: isBreakDay,
+        ),
+      );
     }
     return days;
   }
@@ -310,7 +357,7 @@ class AchievementsService {
       ),
     ];
 
-    // Keep any extra badges from the backend.
+    //Keep any extra badges from the backend.
     final extra = existing.where((b) => !byId.containsKey(b.id)).toList();
     return [
       ...{for (final b in badges) b.id: b}.values,

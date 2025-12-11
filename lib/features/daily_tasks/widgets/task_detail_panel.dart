@@ -851,6 +851,7 @@ class _LabelsEditorState extends State<_LabelsEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final priorityColors = buildPriorityChipColors(widget.priority);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -866,6 +867,10 @@ class _LabelsEditorState extends State<_LabelsEditor> {
             MetaChip(
               icon: Icons.flag_outlined,
               label: 'Priority ${widget.priority}',
+              foregroundColor: priorityColors.foreground,
+              backgroundColor: priorityColors.background,
+              borderColor: priorityColors.border,
+              borderWidth: 1.2,
             ),
             for (final name in widget.labels)
               TagChip(

@@ -202,20 +202,20 @@ class TaskService {
     await _sb.from('tasks').delete().eq('id', taskId).eq('user_id', userId);
     await _goalStepTasks.removeByTask(taskId);
   }
-  /// Fetch all tasks without filtering by user
+  ///Fetch all tasks without filtering by user
   Future<List<TaskItem>> getAllTasks() async {
     final userId = _sb.auth.currentUser?.id;
     if (userId == null) {
-      // No user session; return empty to avoid RLS errors
+      //No user session; return empty to avoid RLS errors
       return const [];
     }
 
     final response = await _sb
       .from('tasks')
       .select()
-      .eq('user_id', userId) // only fetch tasks for this user
-      .order('due_at', ascending: true)   // order by due date first
-      .order('order_hint', ascending: true); // then by order hint
+      .eq('user_id', userId) //only fetch tasks for this user
+      .order('due_at', ascending: true)   //order by due date first
+      .order('order_hint', ascending: true); //then by order hint
 
     final List<Map<String, dynamic>> res = (response as List).cast<Map<String, dynamic>>();
     return res.map(TaskItem.fromMap).toList();

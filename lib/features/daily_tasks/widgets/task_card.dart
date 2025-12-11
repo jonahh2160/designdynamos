@@ -181,6 +181,7 @@ class _MetadataRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chips = <Widget>[];
+    final priorityColors = buildPriorityChipColors(task.priority);
     //Subtask progress
     if (total > 0) {
       chips.add(
@@ -237,7 +238,14 @@ class _MetadataRow extends StatelessWidget {
       chips.add(TagChip(label: name));
     }
     chips.add(
-      MetaChip(icon: Icons.flag_outlined, label: 'Priority ${task.priority}'),
+      MetaChip(
+        icon: Icons.flag_outlined,
+        label: 'Priority ${task.priority}',
+        foregroundColor: priorityColors.foreground,
+        backgroundColor: priorityColors.background,
+        borderColor: priorityColors.border,
+        borderWidth: 1.2,
+      ),
     );
     if (task.isDone) {
       chips.add(MetaChip(icon: Icons.check_circle_outline, label: 'Done'));

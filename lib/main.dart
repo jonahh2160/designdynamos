@@ -21,7 +21,14 @@ import 'providers/game_provider.dart';
 import 'data/services/game_service.dart';
 import 'providers/achievements_provider.dart';
 import 'data/services/achievements_service.dart';
+
+import 'providers/progress_provider.dart';
+import 'data/services/progress_service.dart';
+import 'providers/break_day_provider.dart';
+import 'data/services/break_day_service.dart';
+
 import 'providers/tts_provider.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,9 +42,14 @@ void main() async {
     debugPrint('$stack');
   }
 
+  final breakDayService = BreakDayService(SupabaseService.client);
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(
+          create: (_) => BreakDayProvider(breakDayService)..warmCache(),
+        ),
         ChangeNotifierProvider(
           create: (_) {
             final provider = TaskProvider(TaskService(SupabaseService.client));
@@ -63,7 +75,21 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) =>
-              AchievementsProvider(AchievementsService(SupabaseService.client)),
+              AchievementsProvider(
+                AchievementsService(
+                  SupabaseService.client,
+                  breakDays: breakDayService,
+                ),
+              ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              ProgressProvider(
+                ProgressService(
+                  SupabaseService.client,
+                  breakDays: breakDayService,
+                ),
+              ),
         ),
         ChangeNotifierProvider(
           create: (_) => TtsProvider(),
