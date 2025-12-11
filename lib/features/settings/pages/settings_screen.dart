@@ -5,7 +5,6 @@ import 'package:designdynamos/core/theme/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:designdynamos/data/services/supabase_service.dart';
 import 'package:designdynamos/features/auth/pages/login_page.dart';
-import 'package:designdynamos/features/auth/pages/account_page.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -31,6 +30,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sections = [
+      _SettingsSection(title: 'Account', children: [_DisplayNameTile()]),
+      _SettingsSection(title: 'Accessibility', children: [_TtsToggleTile()]),
+    ];
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -50,10 +54,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            _SettingsSection(title: 'Account', children: [_DisplayNameTile()]),
-            _SettingsSection(
-              title: 'Accessibility',
-              children: [_TtsToggleTile()],
+            ...sections.map(
+              (section) => Padding(
+                padding: const EdgeInsets.only(bottom: 32),
+                child: section,
+              ),
             ),
           ],
         ),
