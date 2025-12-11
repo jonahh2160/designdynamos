@@ -189,14 +189,14 @@ class AchievementsService {
           .where((row) => row['day'] != null)
           .map((row) {
             final raw = row['day'] as String;
-            //Treat stored DATE as UTC midnight, then shift to local day to match user view.
-            final asUtc = DateTime.utc(
+            // day is stored as a timezone-less DATE; keep it as the same local day
+            // to avoid shifting back a day for users behind UTC.
+            final keyDate = DateTime(
               int.parse(raw.substring(0, 4)),
               int.parse(raw.substring(5, 7)),
               int.parse(raw.substring(8, 10)),
             );
-            final local = asUtc.toLocal();
-            final key = DateTime(local.year, local.month, local.day)
+            final key = keyDate
                 .toIso8601String()
                 .split('T')
                 .first;

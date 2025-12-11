@@ -143,9 +143,8 @@ class ProgressService {
         if (dayRaw == null) continue;
         final parsed = DateTime.tryParse(dayRaw);
         if (parsed == null) continue;
-        //Treat stored DATE as UTC midnight.
-        final local = DateTime.utc(parsed.year, parsed.month, parsed.day).toLocal();
-        final keyDate = DateTime(local.year, local.month, local.day);
+        // DATE column has no timezone, so keep it as-is to avoid shifting a day.
+        final keyDate = DateTime(parsed.year, parsed.month, parsed.day);
         final key = keyDate.toIso8601String().split('T').first;
         byDay[key] = DailyStatPoint(
           day: keyDate,
