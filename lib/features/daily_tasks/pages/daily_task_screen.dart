@@ -297,15 +297,14 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 900;
-              final detailTask = p.selectedTask;
-              final detailPanel = detailTask == null
-                  ? null
-                  : TaskDetailPanel(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 900;
+            final edgePadding = constraints.maxWidth < 520 ? 12.0 : 24.0;
+            final detailTask = p.selectedTask;
+            final detailPanel = detailTask == null
+                ? null
+                : TaskDetailPanel(
                       task: detailTask,
                       subtasks: p.subtasksOf(detailTask.id),
                       labels: p.labelsOf(detailTask.id),
@@ -502,295 +501,322 @@ class _DailyTaskScreenState extends State<DailyTaskScreen> {
                       onClose: () => p.selectTask(null),
                     );
 
-              final availableWidth = constraints.maxWidth;
-              final panelWidth = math.max(
-                280.0,
-                math.min(availableWidth * 0.34, 380.0),
-              );
-              final availableHeight = MediaQuery.of(context).size.height;
-              final compactPanelHeight = math.min(availableHeight * 0.6, 560.0);
+            final availableWidth = constraints.maxWidth;
+            final panelWidth = math.max(
+              280.0,
+              math.min(availableWidth * 0.34, 380.0),
+            );
+            final availableHeight = MediaQuery.of(context).size.height;
+            final compactPanelHeight = math.min(availableHeight * 0.6, 560.0);
 
-              final taskColumn = Flexible(
-                flex: 1,
-                fit: FlexFit.tight,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ProgressOverview(
-                      completed: finished.length,
-                      total: p.today.length,
-                      coins: coins.totalCoins,
-                      streakLabel:
-                          '${finished.length}/${p.today.length} tasks completed',
-                    ),
-                    if (isBreakDay)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.sidebarActive.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.taskCardHighlight.withOpacity(0.6),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.beach_access,
-                                color: AppColors.taskCardHighlight,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Break day: tasks are optional and your streak is paused.',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  try {
-                                    await context
-                                        .read<BreakDayProvider>()
-                                        .setBreakDay(p.day, false);
-                                  } catch (error) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text('Failed to end break: $error'),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: const Text('Resume'),
-                              ),
-                            ],
+            final taskColumn = Flexible(
+              flex: 1,
+              fit: FlexFit.tight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProgressOverview(
+                    completed: finished.length,
+                    total: p.today.length,
+                    coins: coins.totalCoins,
+                    streakLabel:
+                        '${finished.length}/${p.today.length} tasks completed',
+                  ),
+                  if (isBreakDay)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.sidebarActive.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.taskCardHighlight.withOpacity(0.6),
                           ),
                         ),
-                      ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            DateFormat('MMMM d').format(p.day),
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                          ),
-                        ),
-                        ActionChipButton(
-                          icon: Icons.auto_awesome,
-                          label: _showSuggestions ? 'Hide suggestions' : 'Suggestions',
-                          onTap: () {
-                            setState(() {
-                              _showSuggestions = !_showSuggestions;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        ActionChipButton(
-                          icon: Icons.add,
-                          label: 'Add task',
-                          onTap: _handleAddTask,
-                        ),
-                        const SizedBox(width: 12),
-                        ActionChipButton(
-                          icon: Icons.filter_list,
-                          label: 'Filter',
-                          onTap: _openFilterSheet,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const SizedBox(height: 12),
-                            ExpansionTile(
-                              key: const PageStorageKey('overdueTasks'),
-                              initiallyExpanded: _overdueExpanded,
-                              onExpansionChanged: (expanded) {
-                                setState(() {
-                                  _overdueExpanded = expanded;
-                                });
-                              },
-                              leading: Icon(
-                                p.overdueTasks.isNotEmpty ? Icons.warning : Icons.check_circle,
-                                color: p.overdueTasks.isNotEmpty ? Colors.red : Colors.green,
-                              ),
-                              title: Text(
-                                p.overdueTasks.isNotEmpty
-                                    ? 'Overdue assignments need attention!'
-                                    : 'No overdue assignments',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              children: [
-                                if (p.overdueTasks.isNotEmpty)
-                                  for (final overdue in p.overdueTasks)
-                                    OverdueTaskAlert(
-                                      task: overdue,
-                                      onDelete: (task) async => await p.deleteTask(task.id),
-                                      onComplete: (task) async => await p.toggleDone(task.id, true),
-                                      onMoveDate: (task) async {
-                                        final picked = await showDatePicker(
-                                          context: context,
-                                          initialDate: DateTime.now(),
-                                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                                        );
-                                        if (picked != null) {
-                                          await p.updateTask(task.id, dueDatePart: picked);
-                                        }
-                                      }
-                                    ),
-                              ],
-                            ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            ReorderableListView(
-                              physics:
-                                  const NeverScrollableScrollPhysics(), //disable inner scroll
-                              shrinkWrap: true, //shrink to fit children
-                              onReorder: (oldIndex, newIndex) async {
-                                if (newIndex > oldIndex) newIndex--;
-
-                                final moved = open.removeAt(oldIndex);
-                                open.insert(newIndex, moved);
-
-                                for (int i = 0; i < open.length; i++) {
-                                  open[i] = open[i].copyWith(orderHint: i);
-                                }
-
-                                for (final t in open) {
+                            const Icon(
+                              Icons.beach_access,
+                              color: AppColors.taskCardHighlight,
+                            ),
+                            Text(
+                              'Break day: tasks are optional and your streak is paused.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                try {
                                   await context
-                                      .read<TaskProvider>()
-                                      .updateTaskOrder(t.id, t.orderHint);
+                                      .read<BreakDayProvider>()
+                                      .setBreakDay(p.day, false);
+                                } catch (error) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to end break: $error'),
+                                    ),
+                                  );
                                 }
                               },
-                              children: [
-                                for (final task in open)
-                                  TaskCard(
-                                    key: ValueKey(task.id),
-                                    task: task,
-                                    isSelected: task.id == selectedTaskId,
-                                    onTap: () => p.selectTask(task.id),
-                                    onToggle: () {
-                                      _toggleTaskCompletion(
-                                        p,
-                                        context.read<CoinProvider>(),
-                                        task,
-                                        !task.isDone,
-                                      );
-                                    },
-                                    subtaskDone: p.subtaskProgress(task.id).$1,
-                                    subtaskTotal:
-                                        p.subtaskProgress(task.id).$2,
-                                    labels: p.labelsOf(task.id),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-
-                            FinishedSectionHeader(
-                              title: 'Finished - ${finished.length}',
-                            ),
-                            const SizedBox(height: 12),
-                            for (final task in finished)
-                              TaskCard(
-                                task: task,
-                                isSelected: task.id == selectedTaskId,
-                                onTap: () => p.selectTask(task.id),
-                                onToggle: () {
-                                  _toggleTaskCompletion(
-                                    p,
-                                    context.read<CoinProvider>(),
-                                    task,
-                                    !task.isDone,
-                                  );
-                                },
-                                subtaskDone: p.subtaskProgress(task.id).$1,
-                                subtaskTotal: p.subtaskProgress(task.id).$2,
-                                labels: p.labelsOf(task.id),
-                              ),
-                            const SizedBox(height: 16),
-                            AddTaskCard(
-                              onPressed: _handleAddTask,
-                              isLoading: _isAdding || p.isCreating,
+                              child: const Text('Resume'),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  const SizedBox(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          DateFormat('MMMM d').format(p.day),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Align(
+                          alignment:
+                              isCompact ? Alignment.centerLeft : Alignment.centerRight,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.end,
+                              children: [
+                                ActionChipButton(
+                                  icon: Icons.auto_awesome,
+                                  label:
+                                      _showSuggestions ? 'Hide suggestions' : 'Suggestions',
+                                  onTap: () {
+                                    setState(() {
+                                      _showSuggestions = !_showSuggestions;
+                                    });
+                                  },
+                                ),
+                                ActionChipButton(
+                                  icon: Icons.add,
+                                  label: 'Add task',
+                                  onTap: _handleAddTask,
+                                ),
+                                ActionChipButton(
+                                  icon: Icons.filter_list,
+                                  label: 'Filter',
+                                  onTap: _openFilterSheet,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                          ExpansionTile(
+                            key: const PageStorageKey('overdueTasks'),
+                            initiallyExpanded: _overdueExpanded,
+                            onExpansionChanged: (expanded) {
+                              setState(() {
+                                _overdueExpanded = expanded;
+                              });
+                            },
+                            leading: Icon(
+                              p.overdueTasks.isNotEmpty ? Icons.warning : Icons.check_circle,
+                              color: p.overdueTasks.isNotEmpty ? Colors.red : Colors.green,
+                            ),
+                            title: Text(
+                              p.overdueTasks.isNotEmpty
+                                  ? 'Overdue assignments need attention!'
+                                  : 'No overdue assignments',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            children: [
+                              if (p.overdueTasks.isNotEmpty)
+                                for (final overdue in p.overdueTasks)
+                                  OverdueTaskAlert(
+                                    task: overdue,
+                                    onDelete: (task) async => await p.deleteTask(task.id),
+                                    onComplete: (task) async => await p.toggleDone(task.id, true),
+                                    onMoveDate: (task) async {
+                                      final picked = await showDatePicker(
+                                        context: context,
+                                        initialDate: DateTime.now(),
+                                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                                      );
+                                      if (picked != null) {
+                                        await p.updateTask(task.id, dueDatePart: picked);
+                                      }
+                                    }
+                                  ),
+                            ],
+                          ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          ReorderableListView(
+                            physics:
+                                const NeverScrollableScrollPhysics(), //disable inner scroll
+                            shrinkWrap: true, //shrink to fit children
+                            onReorder: (oldIndex, newIndex) async {
+                              if (newIndex > oldIndex) newIndex--;
+
+                              final moved = open.removeAt(oldIndex);
+                              open.insert(newIndex, moved);
+
+                              for (int i = 0; i < open.length; i++) {
+                                open[i] = open[i].copyWith(orderHint: i);
+                              }
+
+                              for (final t in open) {
+                                await context
+                                    .read<TaskProvider>()
+                                    .updateTaskOrder(t.id, t.orderHint);
+                              }
+                            },
+                            children: [
+                              for (final task in open)
+                                TaskCard(
+                                  key: ValueKey(task.id),
+                                  task: task,
+                                  isSelected: task.id == selectedTaskId,
+                                  onTap: () => p.selectTask(task.id),
+                                  onToggle: () {
+                                    _toggleTaskCompletion(
+                                      p,
+                                      context.read<CoinProvider>(),
+                                      task,
+                                      !task.isDone,
+                                    );
+                                  },
+                                  subtaskDone: p.subtaskProgress(task.id).$1,
+                                  subtaskTotal:
+                                      p.subtaskProgress(task.id).$2,
+                                  labels: p.labelsOf(task.id),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+
+                          FinishedSectionHeader(
+                            title: 'Finished - ${finished.length}',
+                          ),
+                          const SizedBox(height: 12),
+                          for (final task in finished)
+                            TaskCard(
+                              task: task,
+                              isSelected: task.id == selectedTaskId,
+                              onTap: () => p.selectTask(task.id),
+                              onToggle: () {
+                                _toggleTaskCompletion(
+                                  p,
+                                  context.read<CoinProvider>(),
+                                  task,
+                                  !task.isDone,
+                                );
+                              },
+                              subtaskDone: p.subtaskProgress(task.id).$1,
+                              subtaskTotal: p.subtaskProgress(task.id).$2,
+                              labels: p.labelsOf(task.id),
+                            ),
+                          const SizedBox(height: 16),
+                          AddTaskCard(
+                            onPressed: _handleAddTask,
+                            isLoading: _isAdding || p.isCreating,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            final children = <Widget>[taskColumn];
+
+            if (_showSuggestions || detailPanel != null) {
+              final suggestionsPanel = _SuggestionsPanel(
+                suggestions: p.suggestedTasks,
+                isLoading: p.isLoading,
+                onRefresh: () => p.refreshToday(),
+                onSelect: (task) => p.selectTask(task.id),
+                onComplete: (task) {
+                  _toggleTaskCompletion(
+                    p,
+                    context.read<CoinProvider>(),
+                    task,
+                    true,
+                  );
+                },
               );
 
-              final children = <Widget>[taskColumn];
-
-              if (_showSuggestions || detailPanel != null) {
-                final suggestionsPanel = _SuggestionsPanel(
-                  suggestions: p.suggestedTasks,
-                  isLoading: p.isLoading,
-                  onRefresh: () => p.refreshToday(),
-                  onSelect: (task) => p.selectTask(task.id),
-                  onComplete: (task) {
-                    _toggleTaskCompletion(
-                      p,
-                      context.read<CoinProvider>(),
-                      task,
-                      true,
-                    );
-                  },
+              Widget sidePanel;
+              if (_showSuggestions && detailPanel != null) {
+                sidePanel = Column(
+                  children: [
+                    suggestionsPanel,
+                    const SizedBox(height: 16),
+                    Expanded(child: detailPanel),
+                  ],
                 );
-
-                Widget sidePanel;
-                if (_showSuggestions && detailPanel != null) {
-                  sidePanel = Column(
-                    children: [
-                      suggestionsPanel,
-                      const SizedBox(height: 16),
-                      Expanded(child: detailPanel),
-                    ],
-                  );
-                } else if (_showSuggestions) {
-                  sidePanel = suggestionsPanel;
-                } else {
-                  sidePanel = detailPanel!;
-                }
-
-                children.add(
-                  isCompact
-                      ? const SizedBox(height: 24)
-                      : const SizedBox(width: 24),
-                );
-
-                final boundedPanel = isCompact
-                    ? SizedBox(height: compactPanelHeight, child: sidePanel)
-                    : SizedBox(width: panelWidth, child: sidePanel);
-                if (isCompact) {
-                  children.add(
-                    Flexible(flex: 0, fit: FlexFit.loose, child: boundedPanel),
-                  );
-                } else {
-                  children.add(boundedPanel);
-                }
+              } else if (_showSuggestions) {
+                sidePanel = suggestionsPanel;
+              } else {
+                sidePanel = detailPanel!;
               }
 
-              return Flex(
+              children.add(
+                isCompact
+                    ? const SizedBox(height: 24)
+                    : const SizedBox(width: 24),
+              );
+
+              final boundedPanel = isCompact
+                  ? SizedBox(
+                      height: compactPanelHeight,
+                      child: sidePanel,
+                    )
+                  : SizedBox(width: panelWidth, child: sidePanel);
+              if (isCompact) {
+                children.add(
+                  Flexible(flex: 0, fit: FlexFit.loose, child: boundedPanel),
+                );
+              } else {
+                children.add(boundedPanel);
+              }
+            }
+
+            final basePadding = EdgeInsets.symmetric(
+              horizontal: edgePadding,
+              vertical: isCompact ? 12 : 24,
+            );
+
+            return Padding(
+              padding: basePadding,
+              child: Flex(
                 direction: isCompact ? Axis.vertical : Axis.horizontal,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: children,
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
